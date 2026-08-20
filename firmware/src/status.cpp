@@ -46,5 +46,6 @@ int status_max_quota_percent() {
     bump_used(gStatus.trae);
     bump_used(gStatus.coze);
     bump_remaining(gStatus.glm);
+    /* deepseek balance is yuan, not a percent window — skip bump */
     return m;
 }

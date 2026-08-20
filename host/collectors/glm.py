@@ -36,7 +36,7 @@ def format_bjt_epoch(ts_ms: int) -> int:
 
 
 def parse_quota_json(payload: dict[str, Any], prev: dict[str, Any] | None = None) -> dict[str, Any]:
-    """limits[0]=5h, [1]=7d, [2]=MCP. On parse failure keep prev (never zero the ring)."""
+    """limits[0]=5h, [1]=7d, [2]=1M tool TIME_LIMIT (search/web-reader). Keep prev on parse fail."""
     out = dict(prev or {})
     out.setdefault("h5", 0)
     out.setdefault("d7", 0)

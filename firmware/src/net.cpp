@@ -59,6 +59,7 @@ bool parse_status_json(const char *json) {
     strncpy(gStatus.agent_name, nm, sizeof(gStatus.agent_name) - 1);
     JsonObjectConst prov = doc["providers"];
     apply_provider(gStatus.claude, prov["claude"]);
+    apply_provider(gStatus.deepseek, prov["deepseek"]);
     apply_provider(gStatus.codex, prov["codex"]);
     apply_provider(gStatus.cursor, prov["cursor"]);
     apply_provider(gStatus.glm, prov["glm"]);
@@ -142,8 +143,9 @@ static void poll_http(bool fresh) {
         if (brace >= 0) {
             body = body.substring(brace);
             if (parse_status_json(body.c_str())) {
-                Serial.printf("[NET] glm 5h=%d 7d=%d mcp=%d host_ok=1\n",
-                              gStatus.glm.h5, gStatus.glm.d7, gStatus.glm.mcp);
+                Serial.printf("[NET] glm 5h=%d 7d=%d mcp=%d ds=%d cl=%d host_ok=1\n",
+                              gStatus.glm.h5, gStatus.glm.d7, gStatus.glm.mcp,
+                              (int)gStatus.deepseek.ok, (int)gStatus.claude.ok);
             }
         }
     } else {

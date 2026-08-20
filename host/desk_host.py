@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from collectors.claude import fetch_claude
+from collectors.claude import fetch_claude, fetch_deepseek
 from collectors.codex import fetch_codex
 from collectors.coze import fetch_coze
 from collectors.cursor import fetch_cursor, parse_cursor_summary
@@ -38,6 +38,7 @@ _state = {
     "voice": {"last_text": "", "target": "cursor"},
     "providers": {
         "claude": {"ok": False, "err": "init"},
+        "deepseek": {"ok": False, "err": "init"},
         "codex": {"ok": False, "err": "init"},
         "cursor": {"ok": False, "err": "init"},
         "glm": {"ok": False, "err": "init"},
@@ -81,6 +82,7 @@ def refresh_once() -> None:
         prev = json.loads(json.dumps(_state["providers"]))
     glm = fetch_glm(prev=prev.get("glm"))
     claude = fetch_claude(prev=prev.get("claude"))
+    deepseek = fetch_deepseek(prev=prev.get("deepseek"))
     codex = fetch_codex(prev=prev.get("codex"))
     cursor = fetch_cursor(prev=prev.get("cursor"))
     kimi = fetch_kimi(prev=prev.get("kimi"))
@@ -92,6 +94,7 @@ def refresh_once() -> None:
         _state["agent"] = {"state": agent.get("state") or "idle", "name": agent.get("name") or ""}
         _state["providers"]["glm"] = glm
         _state["providers"]["claude"] = claude
+        _state["providers"]["deepseek"] = deepseek
         _state["providers"]["codex"] = codex
         _state["providers"]["cursor"] = cursor
         _state["providers"]["kimi"] = kimi
@@ -325,6 +328,7 @@ def compact_status_json() -> str:
         "agent": st.get("agent") or {"state": "idle", "name": ""},
         "providers": {
             "claude": slim(prov.get("claude") or {}, ("h5", "d7", "reset_h5", "reset_d7", "daily_tokens")),
+            "deepseek": slim(prov.get("deepseek") or {}, ("daily_tokens",)),
             "codex": slim(prov.get("codex") or {}, ("h5", "d7", "reset_h5", "reset_d7")),
             "cursor": slim(prov.get("cursor") or {}, ("auto_pct", "api_pct", "total_pct", "cycle_end")),
             "glm": slim(prov.get("glm") or {}, ("h5", "d7", "mcp", "reset_h5", "reset_d7", "daily_tokens")),

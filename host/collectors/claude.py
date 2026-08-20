@@ -330,15 +330,23 @@ def _pull(tok: str):
     return r, body
 
 
+def _oauth_fail(err: str, prev: dict[str, Any] | None = None) -> dict[str, Any]:
+    """OAuth failure — never keep DeepSeek balance fields on the Claude slot."""
+    out: dict[str, Any] = {"ok": False, "err": err}
+    if not prev:
+        return out
+    for k in ("h5", "d7", "reset_h5", "reset_d7"):
+        if k in prev and prev[k] is not None:
+            out[k] = prev[k]
+    return out
+
+
 def _fetch_oauth(prev: dict[str, Any] | None = None) -> dict[str, Any]:
     data = _load_cred()
     oauth = _oauth(data)
     tok = _token(data)
     if not tok:
-        out = dict(prev or {})
-        out["ok"] = False
-        out["err"] = "login"
-        return out
+        return _oauth_fail("login", prev)
     did_refresh = False
     if _token_expired(oauth):
         fresh = _refresh()
@@ -352,29 +360,27 @@ def _fetch_oauth(prev: dict[str, Any] | None = None) -> dict[str, Any]:
             if fresh:
                 r, body = _pull(fresh)
         if r.status_code == 401:
-            out = dict(prev or {})
-            out["ok"] = False
-            out["err"] = "login"
-            return out
+            return _oauth_fail("login", prev)
         if r.status_code == 403:
-            out = dict(prev or {})
-            out["ok"] = False
-            out["err"] = "forbid"
-            return out
+            return _oauth_fail("forbid", prev)
         if r.status_code >= 400 and "h5" not in body and "five_hour" not in body and "five_hour_utilization" not in body:
-            out = dict(prev or {})
-            out["ok"] = False
-            out["err"] = "http"
-            return out
-        return parse_claude_usage(body, prev)
-    except Exception:
-        out = dict(prev or {})
-        out["ok"] = False
-        out["err"] = "net"
+            return _oauth_fail("http", prev)
+        out = parse_claude_usage(body, prev)
+        out.pop("daily_tokens", None)
+        out.pop("source", None)
         return out
+    except Exception:
+        return _oauth_fail("net", prev)
+
+
+def fetch_deepseek(prev: dict[str, Any] | None = None) -> dict[str, Any]:
+    return _fetch_deepseek(prev)
 
 
 def fetch_claude(prev: dict[str, Any] | None = None) -> dict[str, Any]:
-    if _deepseek_mode():
-        return _fetch_deepseek(prev)
+    """Anthropic Claude Code OAuth usage only.
+
+    DeepSeek-backed Claude Code settings are collected separately via
+    fetch_deepseek() so the puck can show the DeepSeek logo, not Claude's.
+    """
     return _fetch_oauth(prev)

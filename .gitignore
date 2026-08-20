@@ -15,5 +15,6 @@ host/.venv/
 dist/
 firmware/src/fonts/*.ttf
 firmware/src/fonts/*.ttc
+firmware/src/assets/logos/_preview/
 .tmp-bt-driver/
 build/

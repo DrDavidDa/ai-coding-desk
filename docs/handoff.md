@@ -46,6 +46,8 @@
 ## Host / 额度
 
 - Trae + 扣子（Coze）collector 已接；USAGE 品牌索引 7 = `coze`（非 MiniMax）
+- **Claude Code 品牌**：DeepSeek 余额挂在 **Claude Code** logo/PLAN 上（标题 CLAUDE CODE、脚注 YUAN）；USAGE **不单独出** DeepSeek 瓦片。Host 仍分 `providers.claude` / `providers.deepseek` 采集
+- 网页原型 `docs/desk154-live.html` 会拉 `127.0.0.1:8787/v1/status` 同步开关与余额
 - 额度叮：水滴音 `play_ding()`，日志 `[BEEP] drop`
 - Coze logo：改 `frames.rgb565` 后靠 `extra_script.py` 的 sha256 强制 relink `logos.S`
 
@@ -53,7 +55,8 @@
 
 - DESK 左滑 → USAGE（不是 PACK）
 - USAGE 页翻完 → PACK
-- Logo 点进 PLAN；PLAN 任意滑回 USAGE
+- Logo 点进 PLAN；默认三行 **5H / 7D / 1M**（GLM 第三窗也是月度工具额度，标 1M，不再写 MCP）；Cursor 据实只显示 **AUTO / API**
+- PLAN 任意滑回 USAGE
 
 ## 关键改动文件
 
@@ -72,6 +75,7 @@
 - 企业 Wi‑Fi（WPA2-Enterprise）设备连不上时，语音走 USB 串口 WAV → host SenseVoice
 - 屏上转写中文依赖 `font_idle_*` 字库；缺字会方框/乱码（TALK 页已不再显示转写行）
 - 交接文档：`docs/handoff.md`；进展已入库（见 git log）
+- **Claude / DeepSeek 错位（已修）**：旧逻辑把 DeepSeek 余额挂到 Claude，且 PLAN 把 token-only Claude 改名为 DEEPSEEK。现已拆成 `claude`（OAuth）+ `deepseek`（余额）；PLAN 标题跟真实品牌，余额脚注 `YUAN x.xx`
 
 ## 快速自检
 

@@ -33,6 +33,7 @@ struct DeskStatus {
     char agent_state[16] = "idle";
     char agent_name[16] = "";
     ProviderQuota claude;
+    ProviderQuota deepseek;
     ProviderQuota codex;
     ProviderQuota cursor;
     ProviderQuota glm;

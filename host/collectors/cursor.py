@@ -41,10 +41,12 @@ def parse_cursor_summary(payload: dict[str, Any], prev: dict[str, Any] | None = 
         out["auto_pct"] = a
     if p is not None:
         out["api_pct"] = p
+    # totalPercentUsed is an aggregate, not a third product bucket (Auto vs API/named).
+    # Only keep it when the API actually sent it — never invent from auto.
     if t is not None:
         out["total_pct"] = t
-    elif a is not None:
-        out["total_pct"] = a
+    elif "total_pct" in out:
+        out.pop("total_pct", None)
     cycle = (
         payload.get("billingCycleEnd")
         or payload.get("cycle_end")

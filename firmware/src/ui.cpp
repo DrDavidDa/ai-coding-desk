@@ -57,7 +57,7 @@ struct BrandMeta {
 /* Same order as docs/desk154-live.html BRANDS / logo_img[]. */
 static const BrandMeta kBrands[LOGO_COUNT] = {
     {"codex", "CODEX", 0xE8E4DC, BR_MONO, 420000, "TODAY 09:12", 6 * 3600 + 22 * 60},
-    {"claude", "CLAUDE", 0xD97757, 0, 890000, "TODAY 10:04", 2 * 3600 + 40 * 60},
+    {"claude", "CLAUDE CODE", 0xD97757, 0, 890000, "TODAY 10:04", 2 * 3600 + 40 * 60},
     {"deepseek", "DEEPSEEK", 0x4D6BFE, 0, 210000, "TODAY 08:51", 11 * 3600},
     {"cursor", "CURSOR", 0xF2EDE4, BR_MONO, -1, "TODAY 09:40", 4 * 3600 + 12 * 60},
     {"glm", "GLM", 0x4A7DFF, 0, 1240000, "TODAY 10:01", 18 * 3600 + 5 * 60},
@@ -221,6 +221,16 @@ static void style_hit(lv_obj_t *b, lv_color_t bg) {
     lv_obj_set_style_radius(b, 0, LV_PART_MAIN);
 }
 
+static void on_hit_press(lv_event_t *e) {
+    if (lv_event_get_code(e) != LV_EVENT_PRESSED) return;
+    /* Buttons clear EVENT_BUBBLE, so screen never sees PRESSED and sSwipeAbs
+       would stay stale after a swipe — every later tap would be ignored. */
+    sSwipeAbs = 0;
+    sSwipeX = -1;
+    sSwipeY = -1;
+    ui_note_activity();
+}
+
 static lv_obj_t *make_hit(lv_obj_t *parent, lv_coord_t w, lv_coord_t h, lv_color_t bg, lv_event_cb_t cb) {
     lv_obj_t *b = lv_obj_create(parent);
     lv_obj_remove_style_all(b);
@@ -229,6 +239,7 @@ static lv_obj_t *make_hit(lv_obj_t *parent, lv_coord_t w, lv_coord_t h, lv_color
     lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(b, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_add_event_cb(b, on_hit_press, LV_EVENT_PRESSED, nullptr);
     if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, nullptr);
     return b;
 }
@@ -541,8 +552,8 @@ static void fmt_tok(int n, char *out, size_t cap) {
 }
 
 static bool brand_tracked(const char *id) {
-    return !strcmp(id, "codex") || !strcmp(id, "claude") || !strcmp(id, "cursor")
-        || !strcmp(id, "glm") || !strcmp(id, "kimi")
+    return !strcmp(id, "codex") || !strcmp(id, "claude") || !strcmp(id, "deepseek")
+        || !strcmp(id, "cursor") || !strcmp(id, "glm") || !strcmp(id, "kimi")
         || !strcmp(id, "trae") || !strcmp(id, "coze");
 }
 
@@ -589,16 +600,31 @@ static uint32_t first_reset(uint32_t a, uint32_t b) {
 
 static void brand_sync_live() {
     for (int i = 0; i < LOGO_COUNT; i++) {
+        const char *id = kBrands[i].id;
+        if (!brand_tracked(id)) {
+            sOn[i] = false;
+            continue;
+        }
+        /* Claude Code pointed at DeepSeek: keep Claude Code logo/page, hide DeepSeek tile. */
+        if (!strcmp(id, "deepseek"))
+            sOn[i] = false;
+        else if (!strcmp(id, "claude"))
+            sOn[i] = gStatus.claude.ok || gStatus.deepseek.ok;
+        else
+            sOn[i] = true;
+    }
+    for (int i = 0; i < LOGO_COUNT; i++) {
         if (!sOn[i]) continue;
         const char *id = kBrands[i].id;
         sTokens[i] = -1;
         if (!strcmp(id, "cursor") && gStatus.cursor.ok) {
             int a = win_used(gStatus.cursor.has_auto, gStatus.cursor.auto_pct);
             int p = win_used(gStatus.cursor.has_api, gStatus.cursor.api_pct);
+            /* totalPercentUsed is aggregate — keep for ring, not as PLAN third row. */
             int t = win_used(gStatus.cursor.has_total, gStatus.cursor.total_pct);
             int used = bigger_has(bigger_has(a, p), t);
             if (used < 0) used = 0;
-            apply_live(i, used, a, p, t, gStatus.cursor.cycle_end);
+            apply_live(i, used, a, p, -1, gStatus.cursor.cycle_end);
         } else if (!strcmp(id, "claude") && gStatus.claude.ok) {
             int h = win_used(gStatus.claude.has_h5, gStatus.claude.h5);
             int d = win_used(gStatus.claude.has_d7, gStatus.claude.d7);
@@ -611,6 +637,11 @@ static void brand_sync_live() {
             } else {
                 apply_live(i, used, h, d, -1, first_reset(gStatus.claude.reset_h5, gStatus.claude.reset_d7));
             }
+        } else if (!strcmp(id, "claude") && gStatus.deepseek.ok) {
+            /* DeepSeek balance under Claude Code branding. */
+            long cents = gStatus.deepseek.daily_tokens;
+            apply_live(i, cents > 0 ? 0 : 100, -1, -1, -1, 0);
+            sTokens[i] = cents < 0 ? 0 : cents;
         } else if (!strcmp(id, "codex") && gStatus.codex.ok) {
             int h = win_used(gStatus.codex.has_h5, gStatus.codex.h5);
             int d = win_used(gStatus.codex.has_d7, gStatus.codex.d7);
@@ -659,23 +690,24 @@ static void on_sync(lv_event_t *e) {
 
 static void on_talk(lv_event_t *e) {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    if (sSwipeAbs > 28) return;
+    Serial.println("[UI] talk click");
     if (voice_is_recording()) {
         voice_stop_and_send();
         beep_click();
+        ui_toast("SEND");
     } else if (!voice_is_busy()) {
-        beep_click();
         if (sPage != PAGE_DESK) {
             sPage = PAGE_DESK;
             show_current();
         }
         voice_start(VOICE_SRC_TAP);
+        beep_click();
+        ui_toast("REC");
     }
 }
 
 static void on_boot_key(lv_event_t *e) {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    if (sSwipeAbs > 28) return;
     if (voice_is_recording()) return;
     beep_click();
     strncpy(gStatus.agent_state, "working", sizeof(gStatus.agent_state) - 1);
@@ -685,7 +717,6 @@ static void on_boot_key(lv_event_t *e) {
 
 static void on_stop(lv_event_t *e) {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    if (sSwipeAbs > 28) return;
     if (voice_is_recording()) {
         voice_cancel();
         beep_click();
@@ -782,6 +813,15 @@ static void bubble_tree(lv_obj_t *obj) {
         lv_obj_clear_flag(c, LV_OBJ_FLAG_SCROLLABLE);
         if (lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) {
             lv_obj_clear_flag(c, LV_OBJ_FLAG_EVENT_BUBBLE);
+            /* Labels/icons inside hit targets stay clickable by default in
+               LVGL and steal taps (no handler) — e.g. mic glyph centered on
+               the talk button. Force them to pass through to the parent. */
+            uint32_t gn = lv_obj_get_child_cnt(c);
+            for (uint32_t j = 0; j < gn; j++) {
+                lv_obj_t *g = lv_obj_get_child(c, j);
+                lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
+                lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
+            }
             continue;
         }
         lv_obj_add_flag(c, LV_OBJ_FLAG_EVENT_BUBBLE);
@@ -1013,10 +1053,8 @@ static void plan_paint() {
     const BrandMeta &b = kBrands[sPlanIdx];
     const char *id = b.id;
     lv_color_t col = lv_color_hex(b.color);
-    if (!strcmp(id, "claude") && sLive[sPlanIdx] && sH5[sPlanIdx] < 0 && sD7[sPlanIdx] < 0 && sTokens[sPlanIdx] >= 0)
-        lv_label_set_text(sPlanName, "DEEPSEEK");
-    else
-        lv_label_set_text(sPlanName, b.name);
+    /* Always show the real brand. (Old hack renamed token-only Claude → DEEPSEEK.) */
+    lv_label_set_text(sPlanName, b.name);
     if (lv_obj_get_child_cnt(sPlanBack) > 0)
         lv_obj_set_style_text_color(lv_obj_get_child(sPlanBack, 0), col, 0);
 
@@ -1038,22 +1076,33 @@ static void plan_paint() {
         lv_obj_set_style_img_recolor_opa(sPlanGhost, LV_OPA_TRANSP, 0);
     }
 
-    const char *labs[3] = {"5H", "7D", "30D"};
+    const char *labs[3] = {"5H", "7D", "1M"};
     if (!strcmp(id, "cursor")) {
+        /* Live Cursor usage-summary: Auto models + named/API models only. */
         labs[0] = "AUTO";
         labs[1] = "API";
         labs[2] = "ALL";
-    } else if (!strcmp(id, "glm")) {
-        labs[2] = "MCP";
     } else if (!strcmp(id, "trae")) {
         labs[0] = "CRED";
     } else if (!strcmp(id, "coze")) {
         labs[0] = "TOOL";
     }
     int usedv[3] = {sH5[sPlanIdx], sD7[sPlanIdx], sD30[sPlanIdx]};
+    bool tokens_only = sLive[sPlanIdx] && sH5[sPlanIdx] < 0 && sD7[sPlanIdx] < 0
+        && sTokens[sPlanIdx] >= 0
+        && !strcmp(id, "claude");
     for (int i = 0; i < 3; i++) {
         lv_label_set_text(sPlanLab[i], labs[i]);
-        bool show = sLive[sPlanIdx] ? usedv[i] >= 0 : (i < 2 || !strcmp(id, "cursor") || !strcmp(id, "glm"));
+        bool show = true;
+        if (tokens_only) {
+            show = false;
+        } else if (!strcmp(id, "cursor") && sLive[sPlanIdx]) {
+            /* usage-summary product buckets: Auto + named/API only (not ALL aggregate). */
+            show = (i < 2) && usedv[i] >= 0;
+        } else if (sLive[sPlanIdx]) {
+            /* Coding-plan skeleton: always 5H / 7D / 1M (missing → --). */
+            show = true;
+        }
         if (!show) {
             lv_obj_add_flag(sPlanLab[i], LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(sPlanPct[i], LV_OBJ_FLAG_HIDDEN);
@@ -1089,7 +1138,9 @@ static void plan_paint() {
         char rs[24];
         fmt_reset(sReset[sPlanIdx], rs, sizeof(rs));
         snprintf(foot, sizeof(foot), "RESET  %s", rs);
-    } else if (sLive[sPlanIdx] && !strcmp(id, "claude") && sH5[sPlanIdx] < 0 && sD7[sPlanIdx] < 0 && sTokens[sPlanIdx] >= 0) {
+    } else if (sLive[sPlanIdx] && sTokens[sPlanIdx] >= 0
+               && !strcmp(id, "claude")
+               && sH5[sPlanIdx] < 0 && sD7[sPlanIdx] < 0) {
         long n = sTokens[sPlanIdx];
         snprintf(foot, sizeof(foot), "YUAN  %ld.%02ld", n / 100, n % 100);
     } else if (sLive[sPlanIdx] && sTokens[sPlanIdx] > 0) {
@@ -1128,6 +1179,7 @@ static void make_desk(lv_obj_t *scr) {
         lv_obj_set_style_clip_corner(sKey[i], true, LV_PART_MAIN);
         lv_obj_set_pos(sKey[i], kx[i], 8);
         sKeyAct[i] = lv_label_create(sKey[i]);
+        lv_obj_clear_flag(sKeyAct[i], LV_OBJ_FLAG_CLICKABLE);
         lv_label_set_text(sKeyAct[i], ka[i]);
         lv_obj_set_style_text_font(sKeyAct[i], &font_idle_16, 0);
         lv_obj_set_style_text_color(sKeyAct[i], C_WHITE, 0);
@@ -1154,6 +1206,7 @@ static void make_desk(lv_obj_t *scr) {
     lv_obj_set_style_clip_corner(sTalkBtn, true, LV_PART_MAIN);
     lv_obj_set_pos(sTalkBtn, 26, 116);
     sTalkLab = lv_label_create(sTalkBtn);
+    lv_obj_clear_flag(sTalkLab, LV_OBJ_FLAG_CLICKABLE);
     lv_label_set_text(sTalkLab, ICON_MIC);
     lv_obj_set_style_text_font(sTalkLab, &font_icons, 0);
     lv_obj_set_style_text_color(sTalkLab, C_WHITE, 0);
@@ -1164,6 +1217,7 @@ static void make_desk(lv_obj_t *scr) {
     lv_obj_set_style_clip_corner(sStopBtn, true, LV_PART_MAIN);
     lv_obj_set_pos(sStopBtn, 134, 116);
     sStopLab = lv_label_create(sStopBtn);
+    lv_obj_clear_flag(sStopLab, LV_OBJ_FLAG_CLICKABLE);
     lv_label_set_text(sStopLab, ICON_BAN);
     lv_obj_set_style_text_font(sStopLab, &font_icons, 0);
     lv_obj_set_style_text_color(sStopLab, C_MUTE, 0);
@@ -1295,7 +1349,7 @@ static void make_plan(lv_obj_t *scr) {
     lv_label_set_text(sPlanUpd, "");
     lv_obj_align(sPlanUpd, LV_ALIGN_TOP_LEFT, 42, 34);
 
-    static const char *labs[3] = {"5H", "7D", "30D"};
+    static const char *labs[3] = {"5H", "7D", "1M"};
     for (int i = 0; i < 3; i++) {
         int y = 70 + i * 40;
         sPlanLab[i] = make_label(scr, &lv_font_montserrat_12, C_MUTE);
