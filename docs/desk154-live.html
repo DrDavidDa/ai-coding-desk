@@ -17,6 +17,8 @@
       --white: #ffffff;
       --gray: #6a645c;
       --desk: #14110e;
+      --orange: #e87b1a;
+      --talk: #7ec8ff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -72,16 +74,66 @@
       background: var(--hot);
       animation: blink 0.8s step-end infinite;
     }
-    .word {
-      position: absolute; left: 16px; top: 12px; right: 90px;
-      font-size: 16px; color: var(--copper); letter-spacing: .04em;
-      min-height: 20px;
+    .key-row {
+      position: absolute; left: 0; top: 8px; width: 240px; height: 36px;
+      z-index: 3;
     }
-    .word.hot { color: var(--hot); }
-    .desk-hero {
-      position: absolute; left: 16px; right: 16px; top: 36px; height: 82px;
-      display: flex; align-items: baseline; gap: 8px;
-      z-index: 2; pointer-events: none;
+    .key-chip {
+      position: absolute; top: 0; width: 70px; height: 36px;
+      border-radius: 10px; background: var(--orange); color: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; letter-spacing: .04em; cursor: pointer;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .key-chip:nth-child(1) { left: 0; }
+    .key-chip:nth-child(2) { left: 85px; }
+    .key-chip:nth-child(3) { left: 170px; }
+    .key-chip:active { filter: brightness(1.12); }
+    .rec-timer {
+      position: absolute; left: 20px; right: 20px; top: 58px;
+      text-align: center; font-size: 28px; line-height: 1;
+      letter-spacing: -.02em; color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      pointer-events: none; display: none;
+    }
+    #page-desk.recording .rec-timer { display: block; }
+    .acts {
+      position: absolute; left: 0; top: 108px; width: 240px; height: 116px;
+      z-index: 2;
+    }
+    .hit {
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; user-select: none;
+    }
+    .hit:active { filter: brightness(1.12); }
+    .talk-halo {
+      position: absolute; left: 18px; top: 0; width: 116px; height: 116px;
+      border-radius: 58px; background: var(--orange); opacity: .3;
+      pointer-events: none; display: none;
+    }
+    #page-desk.recording .talk-halo { display: block; }
+    #page-desk.recording.pulse .talk-halo { opacity: .5; }
+    .talk {
+      position: absolute; left: 26px; top: 8px;
+      width: 100px; height: 100px; border-radius: 50px;
+      background: var(--orange); color: var(--white);
+    }
+    #page-desk.recording .talk { background: #241c16; }
+    #page-desk.recording.pulse .talk { background: #1a2838; }
+    #page-desk.recording .talk svg { color: var(--white); }
+    #page-desk.recording.pulse .talk svg { color: var(--talk); }
+    .stop {
+      position: absolute; left: 134px; top: 8px;
+      width: 100px; height: 100px; border-radius: 50px;
+      background: var(--well); color: var(--mute);
+    }
+    #page-desk.running .stop,
+    #page-desk.recording .stop {
+      background: var(--hot); color: var(--white);
+    }
+    .talk svg, .stop svg {
+      width: 36px; height: 36px; fill: currentColor;
+      pointer-events: none;
     }
     .bat {
       display: flex; align-items: baseline; gap: 5px;
@@ -104,50 +156,6 @@
     .bat i b {
       position: absolute; left: 1px; top: 1px; bottom: 1px;
       background: currentColor;
-    }
-    .line {
-      flex: 1; min-width: 0; height: 100%;
-      font-size: 18px; color: var(--ink); line-height: 1.25;
-      overflow: hidden;
-    }
-    .line.mute { color: var(--mute); font-size: 15px; }
-    .line.timer {
-      font-size: 44px; line-height: 1; letter-spacing: -.04em;
-      font-variant-numeric: tabular-nums;
-      display: flex; align-items: baseline;
-      color: var(--ink);
-    }
-    #page-desk:not(.busy) .desk-hero { top: 20px; height: 98px; }
-    #page-desk.recording .desk-hero { align-items: flex-start; }
-    .acts {
-      position: absolute; left: 10px; right: 10px; top: 124px;
-      height: 92px;
-      display: flex; gap: 8px;
-      z-index: 2;
-    }
-    .hit {
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; user-select: none;
-    }
-    .hit:active { filter: brightness(1.16); }
-    .talk {
-      flex: 1; height: 92px;
-      background: var(--hot); color: var(--white);
-      font-size: 28px; letter-spacing: .08em;
-    }
-    .talk.rec { background: var(--ink); color: var(--bg); }
-    .stop {
-      width: 72px; height: 92px; flex: none;
-      background: var(--copper); color: var(--bg);
-      font-size: 14px; letter-spacing: .1em;
-    }
-    .stop.dim { background: var(--well); color: var(--mute); }
-    #page-desk.running .stop {
-      background: var(--hot); color: var(--white);
-    }
-    #page-desk.recording .stop {
-      background: #241c16; color: var(--mute);
-      font-size: 20px; letter-spacing: 0;
     }
     .usage-head { position: absolute; left: 18px; top: 12px; }
     .usage-head .k { font-size: 12px; color: var(--mute); letter-spacing: .16em; }
@@ -394,10 +402,11 @@
     .side { width: min(420px, 100%); }
     .caps { display: flex; gap: 8px; margin: 12px 0 18px; }
     .cap {
-      flex: 1; height: 44px; background: #1c1814; border: 1px solid #3a332c;
-      color: var(--ink); font-size: 12px; letter-spacing: .12em; cursor: pointer;
+      flex: 1; height: 44px; background: var(--orange); border: none; border-radius: 10px;
+      color: var(--white); font-size: 14px; letter-spacing: .04em; cursor: pointer;
+      font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
     }
-    .cap:active { background: var(--copper); color: var(--bg); }
+    .cap:active { filter: brightness(1.12); }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
     .chip {
       border: 1px solid #3a332c; background: transparent; color: var(--mute);
@@ -420,10 +429,10 @@
   <div class="kicker">Desk154 · 240×240 · live</div>
   <h1>额度就是 logo 本身</h1>
   <p class="lede">
-    有订阅才上场，一屏最多 4 个。原色是剩余额度，从顶上按比例扣成纯灰；灰完就是用完。
-    外轮廓只留一丝细线。每个 logo 下面一行是额度更新倒计时。
-    先留 coding 35 家（约 322 KB 固件位图），9 页。第一页 Codex / Claude / DeepSeek / Cursor。底部 <b>‹ n/9 ›</b> 翻页。
-    点 logo 只进该厂商详情，左右滑都返回。TALK 页左滑进压缩机。USAGE 最后一页再左滑进压缩机。待机 3 分钟。
+    与真机固件同步：顶栏 <b>发送 / 取消 / 讲话</b>；TALK 两大圆 <b>麦克风 / 禁止</b>，录音显示秒数并脉冲。
+    USAGE 有订阅才上场，一屏最多 4 个；原色是剩余额度，从顶上扣成灰。
+    PLAN 默认 <b>5H / 7D / 1M</b>；Cursor 据实 <b>AUTO / API</b>；Claude Code 接 DeepSeek 时仍为 Claude Code 页 + <b>YUAN</b>。
+    左滑 DESK→USAGE→PACK；点 logo 进 PLAN；待机 3 分钟。
   </p>
 
   <div class="brands" id="allLogos"></div>
@@ -437,14 +446,20 @@
         <div class="page on" id="page-desk">
           <div class="stripe copper"></div>
           <div class="desk-bar"></div>
-          <div class="word" id="word">语音输入</div>
-          <div class="desk-hero">
-            <div class="line" id="line"></div>
-            <div class="bat" id="bat"><i><b id="batFill"></b></i><span data-pct>81%</span></div>
+          <div class="key-row">
+            <div class="key-chip" id="keyBoot">发送</div>
+            <div class="key-chip" id="keyPwr">取消</div>
+            <div class="key-chip" id="keyPlus">讲话</div>
           </div>
+          <div class="rec-timer" id="recTimer">0.0</div>
           <div class="acts">
-            <div class="hit talk" id="talk">TALK</div>
-            <div class="hit stop" id="stop">STOP</div>
+            <div class="talk-halo" id="talkHalo"></div>
+            <div class="hit talk" id="talk" title="讲话">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg>
+            </div>
+            <div class="hit stop" id="stop" title="取消">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31A7.902 7.902 0 0 1 12 20zm6.31-3.1L7.1 5.69A7.902 7.902 0 0 1 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>
+            </div>
           </div>
           <div class="dots"><i class="on"></i><i></i></div>
         </div>
@@ -498,11 +513,11 @@
     </div>
 
     <div class="side">
-      <div class="kicker">caps · L→R</div>
+      <div class="kicker">caps · L→R · 面对屏幕</div>
       <div class="caps">
-        <button class="cap" id="boot">BOOT</button>
-        <button class="cap" id="pwr">PWR</button>
-        <button class="cap" id="plus">PLUS</button>
+        <button class="cap" id="boot">发送</button>
+        <button class="cap" id="pwr">取消</button>
+        <button class="cap" id="plus">讲话</button>
       </div>
       <div class="row">
         <button class="chip" id="shake">SHAKE</button>
@@ -514,7 +529,8 @@
       <div class="kicker">subscribed</div>
       <div class="row" id="subs"></div>
       <p class="hint" style="margin-top:10px">
-        点 logo 只进该厂商。FLIP 扣过去：静音、不说话、屏黑。KNOCK 敲桌：灭/开背光（GPIO 46 灯，平时 80% 所以感觉没有）。SHAKE 仍是停/撤销/冲压。
+        顶栏与侧键同名：<b>发送</b> Enter、<b>取消</b> 停录音/Stop、<b>讲话</b> 按住说话（侧键）或点麦开始/结束。
+        点 logo 进厂商 PLAN。FLIP 静音扣屏；KNOCK 背光；SHAKE 停/撤销/冲压。
       </p>
     </div>
   </div>
@@ -1077,7 +1093,7 @@
 
     function kicker() {
       if (performance.now() < S.toastUntil) return $("toast").textContent;
-      if (S.rec) return "TALK";
+      if (S.rec) return "REC";
       if (S.agent === "working" || S.agent === "waiting") return "RUN";
       if (S.agent === "error") return "ERR";
       return "";
@@ -1101,23 +1117,8 @@
       desk.classList.toggle("busy", busy);
       desk.classList.toggle("recording", S.rec);
       desk.classList.toggle("running", running);
-      $("word").textContent = "语音输入";
-      $("word").classList.remove("hot");
-      const line = $("line");
-      if (S.rec) {
-        line.className = "line timer";
-        line.textContent = ((now - S.recAt) / 1000).toFixed(1);
-      } else if (S.last) {
-        line.className = "line";
-        line.textContent = S.last;
-      } else {
-        line.className = "line mute";
-        line.textContent = "PLUS 按住说";
-      }
-      $("talk").textContent = S.rec ? "END" : "TALK";
-      $("talk").classList.toggle("rec", S.rec);
-      $("stop").textContent = S.rec ? "✕" : "STOP";
-      $("stop").classList.toggle("dim", !S.rec && !running);
+      desk.classList.toggle("pulse", S.rec && Math.floor(now / 400) % 2 === 0);
+      if (S.rec) $("recTimer").textContent = ((now - S.recAt) / 1000).toFixed(1);
       if (now >= S.toastUntil) $("toast").classList.remove("on");
       lamp();
       paintBat();
@@ -1138,13 +1139,14 @@
       S.recAt = performance.now();
       S.view = "desk";
       showPage();
+      toast("REC");
     }
     function endTalk(send) {
       if (!S.rec) return;
       S.rec = false;
       if (send) {
         S.last = "把登录改成 JWT";
-        toast("INJECT");
+        toast("SEND");
       } else toast("CANCEL");
     }
     function stopAgent() {
@@ -1158,6 +1160,13 @@
       if (S.rec) endTalk(false);
       else stopAgent();
     };
+    $("keyBoot").onclick = () => { if (!S.rec) toast("ENTER"); };
+    $("keyPwr").onclick = () => {
+      if (S.rec) endTalk(false);
+      else if (S.agent === "working" || S.agent === "waiting") stopAgent();
+      else prevPage();
+    };
+    $("keyPlus").onclick = () => { if (S.lastAbs > 28) return; startTalk(); };
     $("sync").onclick = () => toast("SYNC");
     $("pager").onclick = (e) => {
       e.stopPropagation();
