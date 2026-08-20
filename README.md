@@ -3,7 +3,7 @@
 > **一块 1.54″ 触屏 ESP32，盯着你所有 Coding Plan 的剩余算力，按住就能说话打进 Cursor。**  
 > 不把 Cookie / JWT 写进设备。额度在 Windows 上采，数字在桌上亮。
 
-[**▶ 打开交互原型（240×240 模拟）**](https://drdavida.github.io/ai-coding-desk/desk154-live.html) · [硬件引脚](docs/hardware.md) · [落地用法](docs/ops-landing.md) · [安装](docs/setup.md)
+[**▶ 打开交互原型（240×240 模拟）**](https://drdavidda.github.io/ai-coding-desk/desk154-live.html) · [硬件引脚](docs/hardware.md) · [落地用法](docs/ops-landing.md) · [安装](docs/setup.md)
 
 ---
 
@@ -89,7 +89,7 @@ pio run -e waveshare_lcd_154
 
 ### 3. 先玩原型（零硬件）
 
-浏览器打开 [desk154-live.html](https://drdavida.github.io/ai-coding-desk/desk154-live.html)  
+浏览器打开 [desk154-live.html](https://drdavidda.github.io/ai-coding-desk/desk154-live.html)  
 （本地：`docs/desk154-live.html`）。可与本机 `desk_host` 同步额度。
 
 ---
