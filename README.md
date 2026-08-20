@@ -1,73 +1,93 @@
-# Desk154 — 桌面上的 AI Coding 额度屏 + 语音键
+<p align="center">
+  <img src="docs/assets/desk154-banner.png" alt="Desk154 — AI Coding Desk" width="100%" />
+</p>
 
-> **一块 1.54″ 触屏 ESP32，盯着你所有 Coding Plan 的剩余算力，按住就能说话打进 Cursor。**  
-> 不把 Cookie / JWT 写进设备。额度在 Windows 上采，数字在桌上亮。
+<h1 align="center">别再为额度切网页了</h1>
 
-[**▶ 打开交互原型（240×240 模拟）**](https://drdavidda.github.io/ai-coding-desk/desk154-live.html) · [硬件引脚](docs/hardware.md) · [落地用法](docs/ops-landing.md) · [安装](docs/setup.md)
+<p align="center">
+  <b>一块 1.54″ 触屏，把 Claude / Cursor / Codex / GLM 的剩余算力钉在桌上。</b><br/>
+  按住说话 → 字直接打进 Cursor。密钥永远不进固件。
+</p>
+
+<p align="center">
+  <a href="https://drdavidda.github.io/ai-coding-desk/desk154-live.html"><strong>⚡ 0 硬件 · 先点开玩 30 秒</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/DrDavidDa/ai-coding-desk/stargazers">⭐ Star</a>
+  &nbsp;·&nbsp;
+  <a href="#-5-分钟上手">🚀 刷机</a>
+  &nbsp;·&nbsp;
+  <a href="docs/ops-landing.md">📖 怎么用</a>
+</p>
+
+<p align="center">
+  <img alt="license" src="https://img.shields.io/badge/license-see_repo-lightgrey" />
+  <img alt="platform" src="https://img.shields.io/badge/ESP32--S3-1.54%22_LCD-orange" />
+  <img alt="stack" src="https://img.shields.io/badge/LVGL_8_+_Python_Host-black" />
+  <img alt="demo" src="https://img.shields.io/badge/live_demo-GitHub_Pages-blue" />
+</p>
 
 ---
 
-## 为什么值得 Star / 反复回来看
+## 先抄这段去发（可直接转）
 
-| 痛点 | Desk154 |
+> 我把 Claude / Cursor / Codex 的额度做成了一块桌上的小屏。  
+> Logo 本身就是剩余额度环。按住说话，字打进 Cursor。  
+> Cookie 不进板子。0 硬件也能玩原型：  
+> https://drdavidda.github.io/ai-coding-desk/desk154-live.html  
+> Repo：https://github.com/DrDavidDa/ai-coding-desk
+
+发完回来点个 Star —— 你的转发是这个项目活下去的理由。
+
+---
+
+## 30 秒懂它在骂谁
+
+| 你现在这样 | Desk154 |
 |---|---|
-| Coding Plan 额度藏在网页深处 | 桌面常亮：Claude Code / Codex / Cursor / GLM / Kimi / Trae / Coze… |
-| 说话还要切窗口、找麦克风 | 板载双麦 PTT → PC SenseVoice → 字直接打进当前输入框 |
-| 市售 Codex Micro 贵且无屏 | 微雪 1.54″ 彩屏 + 三键 + 可选 WS2812，自己刷固件 |
-| 密钥跟着固件走 | **Secrets 只在 `desk_host`，设备只收数字与按键** |
+| 打开 4 个网页看额度 | **抬头一眼**就知道谁快没了 |
+| 戴耳机找麦、切窗口说话 | **板载双麦**，按住就说 |
+| 买个无屏宏键盘几百刀 | **微雪 1.54″ 彩屏**，自己刷，可改 |
+| Token 写进固件被抄走 | **Secrets 只在 Windows Host** |
 
-交互原型和真机 UI 同源设计语言——改完原型再刷板，回访成本极低。
-
----
-
-## 一屏看懂
-
-```mermaid
-flowchart LR
-  subgraph Desk["Desk154 硬件"]
-    LCD["240×240 触屏"]
-    MIC["ES7210 双麦"]
-    KEY["BOOT / PWR / PLUS"]
-    HID["BLE HID"]
-  end
-  subgraph PC["Windows desk_host"]
-    COL["额度采集器"]
-    ASR["SenseVoice"]
-    INJ["Unicode 注入"]
-  end
-  LCD -->|"USAGE / PLAN"| COL
-  MIC -->|"WAV USB/Wi‑Fi"| ASR
-  ASR --> INJ
-  KEY --> HID
-  COL -->|"JSON 数字"| LCD
-```
-
-**顶栏三键（面对屏幕 L→R）：发送 | 取消 | 讲话**  
-**TALK 页：** 大圆麦克风 / 禁止；录音计时 + 脉冲。  
-**USAGE：** Logo 本身就是额度环；点进 PLAN → **5H / 7D / 1M**（Cursor 据实 **AUTO / API**）。  
-**Claude Code 接 DeepSeek 时：** 仍显示 Claude Code 品牌页，余额脚注 `YUAN x.xx`。
+市售「AI 编程麦克垫」贵、无屏、闭源。  
+Desk154：**开源 · 有屏 · 额度可见 · 语音可进对话框**。
 
 ---
 
-## 仓库结构
+## 一屏看懂（转发友好）
 
+```text
+┌──────── Desk154 ────────┐         ┌──── Windows Host ────┐
+│ 240×240 触屏 USAGE/PLAN │ ◄─JSON─ │ 各家 Coding Plan 采集 │
+│ 麦 → WAV                │ ─WAV──► │ SenseVoice 转写      │
+│ 发送/取消/讲话 · BLE HID│ ─HID──► │ 字打进当前输入框     │
+└─────────────────────────┘         └──────────────────────┘
+         密钥 / Cookie / JWT  ←绝不进板子
 ```
-ai-coding-desk/
-├── firmware/          # PlatformIO · waveshare_lcd_154 · LVGL 8
-├── host/              # desk_host.py · collectors · SenseVoice · HID 注入
-├── chrome-extension/  # Cursor usage 辅助（可选）
-└── docs/
-    ├── desk154-live.html   # 可点的 UI 原型（建议先玩这个）
-    ├── hardware.md
-    ├── setup.md
-    └── ops-landing.md
-```
+
+**真机手感**
+- 顶栏：**发送 | 取消 | 讲话**（不是 BOOT/PWR 英文）
+- 两大圆：**麦克风 / 禁止**；录音秒数 + 脉冲
+- USAGE：Logo 就是额度；点进 **5H / 7D / 1M**（Cursor = **AUTO / API**）
+- Claude Code 走 DeepSeek：仍是 **Claude Code** 页，脚注 `YUAN x.xx`
 
 ---
 
-## 快速开始
+## 🔥 先玩原型（今天就能传播）
 
-### 1. 主机（Windows）
+不用板子。打开就滑、就点麦、就进 PLAN：
+
+### 👉 [desk154-live.html · 240×240 交互原型](https://drdavidda.github.io/ai-coding-desk/desk154-live.html)
+
+玩完把链接丢群里 / 小红书 / V2EX / Twitter。  
+「截图 + 上面那段文案」= 完整传播包。
+
+---
+
+## ⚡ 5 分钟上手
+
+<details>
+<summary><b>1）Windows Host</b></summary>
 
 ```bat
 cd host
@@ -76,61 +96,65 @@ set DESK_NO_TRAY=1
 py -3 -u desk_host.py
 ```
 
-服务默认 `http://127.0.0.1:8787`，密钥见 `host/secrets/host_key.txt`（勿提交）。
+`http://127.0.0.1:8787` · 密钥放 `host/secrets/`（已 gitignore）
+</details>
 
-### 2. 固件（Desk154，SKU 33869）
+<details>
+<summary><b>2）固件 · Waveshare ESP32-S3-Touch-LCD-1.54（SKU 33869）</b></summary>
 
 ```bat
 cd firmware
 pio run -e waveshare_lcd_154
 ```
 
-烧录注意：应用口多为 **COM8**，下载口 **COM7**；**DIO 16MB**，勿刷到其它 ESP。详见 [docs/handoff.md](docs/handoff.md)。
+烧录口通常 COM8→1200 触摸→COM7，**DIO 16MB**。详见 [docs/handoff.md](docs/handoff.md)。  
+**禁止**误刷其它 ESP。
+</details>
 
-### 3. 先玩原型（零硬件）
+<details>
+<summary><b>3）零硬件</b></summary>
 
-浏览器打开 [desk154-live.html](https://drdavidda.github.io/ai-coding-desk/desk154-live.html)  
-（本地：`docs/desk154-live.html`）。可与本机 `desk_host` 同步额度。
-
----
-
-## 能力清单
-
-- [x] 多厂商 Coding Plan 额度环 + PLAN 详情
-- [x] 触屏滑动：DESK → USAGE → PACK；待机时钟
-- [x] PLUS 按住说话 / 触屏麦克风点按录音
-- [x] BLE HID：发送 / 取消 / 讲话
-- [x] Cursor AUTO+API；GLM 5H/7D/1M；Claude Code 品牌 + DeepSeek 余额
-- [x] 额度告警水滴音
-- [ ] 更多厂商一键开关（原型里已可点 chip）
+只开 [Live Demo](https://drdavidda.github.io/ai-coding-desk/desk154-live.html)。可与本机 Host 同步额度。
+</details>
 
 ---
 
-## 安全边界
+## 仓库地图
 
-| 在 Host | 绝不进固件 |
-|---|---|
-| Anthropic / DeepSeek / 智谱 / Cursor token | Cookie、JWT、API Key |
-| SenseVoice API Key | |
+```
+firmware/   ESP32 · LVGL · 触屏 / 麦 / 三键 / BLE
+host/       额度采集 · SenseVoice · 注入
+docs/       原型 · 硬件 · 落地用法
+chrome-extension/  Cursor 辅助（可选）
+```
 
-设备只显示百分比与元，串口/Wi‑Fi 只推数字 JSON。
+---
+
+## 安全一句话
+
+**板子只显示数字。Token 死在 Host。**
 
 ---
 
 ## 硬件
 
-Waveshare **ESP32-S3-Touch-LCD-1.54**（SKU **33869**）  
-引脚与 BOM：[docs/hardware.md](docs/hardware.md)
+Waveshare **ESP32-S3-Touch-LCD-1.54** · SKU **33869**  
+[引脚与 BOM](docs/hardware.md) · [坐下怎么用](docs/ops-landing.md)
 
 ---
 
-## License
+## 一起把它打爆
 
-按仓库内声明使用；第三方 Logo / 商标归原厂商，仅用于额度展示识别。
-
----
+| 你能做的 | 为什么重要 |
+|---|---|
+| ⭐ Star | 排序与曝光 |
+| 转发 Demo 链接 | 0 门槛种草 |
+| Issue / PR 新厂商额度 | 生态变厚 |
+| 晒桌面实拍 | 内容燃料 |
 
 <p align="center">
-  <b>桌上多一盏额度灯，少切一次网页。</b><br/>
-  Star 一下，改完原型再回来刷机。
+  <b>桌上多一盏额度灯，少切一次网页。</b><br/><br/>
+  <a href="https://github.com/DrDavidDa/ai-coding-desk">⭐ Star this repo</a>
+  &nbsp;·&nbsp;
+  <a href="https://drdavidda.github.io/ai-coding-desk/desk154-live.html">▶ Play the demo</a>
 </p>
