@@ -1,0 +1,8 @@
+GPU mark on the burn page is a 240px line drawing after:
+
+- Lucide `gpu` (ISC) — I/O bracket + display ports
+  https://lucide.dev/icons/gpu
+- Phosphor `graphics-card` (MIT) — dual fans + PCIe gold fingers
+  https://phosphoricons.com/
+
+Colored for the dark desk; fans still spin on tap.

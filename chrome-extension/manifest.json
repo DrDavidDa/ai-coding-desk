@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "AI Coding Desk Cursor Bridge",
+  "version": "1.0.0",
+  "description": "Forwards Cursor usage percentages to the local desk host. Never sends cookies.",
+  "permissions": ["alarms", "storage"],
+  "host_permissions": [
+    "https://cursor.com/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Desk Cursor" }
+}

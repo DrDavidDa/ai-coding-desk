@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <title>Desk154 FACE — three cuts</title>
+  <style>
+    :root {
+      --desk: #14110e;
+      --paper: #ebe4d6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--desk);
+      color: var(--paper);
+      font-family: Bahnschrift, "Segoe UI Variable Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+    }
+    body { padding: 36px 40px 64px; }
+    header { max-width: 980px; margin-bottom: 28px; }
+    .kicker {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #9a8f7e;
+    }
+    h1 {
+      font-weight: 400;
+      font-size: 28px;
+      letter-spacing: -0.03em;
+      margin: 8px 0 10px;
+    }
+    .lede { color: #c4b8a6; font-size: 15px; line-height: 1.55; max-width: 52em; }
+    .map {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #9a8f7e;
+      line-height: 1.6;
+    }
+    .map b { color: var(--paper); font-weight: 500; }
+    .row {
+      display: flex;
+      gap: 28px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      margin-top: 32px;
+    }
+    .cut { width: 240px; }
+    .tag {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #9a8f7e;
+      margin-bottom: 10px;
+    }
+    .tag em { font-style: normal; color: #e8b07a; }
+    .puck {
+      width: 240px;
+      height: 240px;
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      box-shadow: 0 18px 40px rgba(0,0,0,.45);
+    }
+    .puck canvas, .puck .face { position: absolute; inset: 0; }
+    .note { margin-top: 10px; font-size: 12px; color: #8a8072; line-height: 1.45; }
+    .hint { margin-top: 36px; font-size: 12px; color: #6f675c; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="kicker">Desk154 · 240×240 · session instrument</div>
+    <h1>三张脸，同一套手</h1>
+    <p class="lede">PLUS 说话 · BOOT 回车 · 进行中 PWR 停 · 空闲 PWR 发 ↑ · 甩一下撤销上一句。首页不再放 TALK/STOP。点屏幕可看 IDLE / RUN / TALK / UNDO。</p>
+    <p class="map"><b>A Ember</b> 桌上暖物，推荐。　<b>B Bone</b> 玩具计算机。　<b>C Glyph</b> 夜灯点阵。</p>
+  </header>
+  <div class="row">
+    <figure class="cut">
+      <div class="tag">A · <em>recommended</em> · ember</div>
+      <div class="puck" id="a" data-skin="ember"></div>
+      <p class="note">近黑、一条铜线、一个大词。额度只在第二页，首页不再放四格。</p>
+    </figure>
+    <figure class="cut">
+      <div class="tag">B · bone</div>
+      <div class="puck" id="b" data-skin="bone"></div>
+      <p class="note">骨色壳体。状态是章，额度是四条短线。更「物件」，对比度偏软。</p>
+    </figure>
+    <figure class="cut">
+      <div class="tag">C · glyph</div>
+      <div class="puck" id="c" data-skin="glyph"></div>
+      <p class="note">只剩点和字。时尚，但 240 上转写行会变难读。</p>
+    </figure>
+  </div>
+  <p class="hint">USAGE 是左滑第二页（四家 Plan 全貌）。额度满 70% 两声提示，满 90% 三声并每两分钟再叫。</p>
+  <script>
+    const STATES = ["idle", "run", "talk", "undo"];
+    const COPY = {
+      idle: { word: "IDLE", line: "last  把登录改成 JWT" },
+      run:  { word: "RUN",  line: "cursor · agents" },
+      talk: { word: "TALK", line: "listening" },
+      undo: { word: "UNDO", line: "line withdrawn" },
+    };
+    function skin(name) {
+      if (name === "bone") return {
+        bg: "#e7dcc8", ink: "#2a241c", mute: "#8a7d6b",
+        ember: "#c45c26", run: "#1e4d45", talk: "#9b1c2c",
+        tick: "#2a241c", paper: "#f3ead8"
+      };
+      if (name === "glyph") return {
+        bg: "#070708", ink: "#f3f1ec", mute: "#6a6862",
+        ember: "#f3f1ec", run: "#f3f1ec", talk: "#f3f1ec",
+        tick: "#f3f1ec", paper: "#070708"
+      };
+      return {
+        bg: "#100e0c", ink: "#f1e6d4", mute: "#8d8274",
+        ember: "#d4a06a", run: "#d4a06a", talk: "#c45c3a",
+        tick: "#d4a06a", paper: "#100e0c"
+      };
+    }
+
+    function paint(el, st) {
+      const s = skin(el.dataset.skin);
+      const c = COPY[st];
+      const cv = el.querySelector("canvas") || Object.assign(document.createElement("canvas"), { width: 240, height: 240 });
+      if (!cv.parentNode) el.appendChild(cv);
+      const g = cv.getContext("2d");
+      g.fillStyle = s.bg;
+      g.fillRect(0, 0, 240, 240);
+
+      if (el.dataset.skin === "ember") {
+        g.fillStyle = s.ember;
+        g.fillRect(18, 18, 54, 2);
+      }
+      if (el.dataset.skin === "glyph") {
+        for (let i = 0; i < 8; i++) {
+          g.fillStyle = i < 3 || st !== "idle" ? s.ink : "#222";
+          g.fillRect(18 + i * 8, 18, 4, 4);
+        }
+      }
+
+      g.fillStyle = s.mute;
+      g.font = "11px Bahnschrift, sans-serif";
+      g.letterSpacing = "0.18em";
+      g.fillText("DESK154", 18, 42);
+
+      const wordCol = st === "talk" ? s.talk : st === "run" || st === "undo" ? s.run : s.ink;
+      g.fillStyle = wordCol;
+      g.font = el.dataset.skin === "glyph"
+        ? "500 52px Bahnschrift, sans-serif"
+        : "400 44px Bahnschrift, sans-serif";
+      g.fillText(c.word, 16, 118);
+
+      g.fillStyle = s.mute;
+      g.font = "12px Bahnschrift, sans-serif";
+      g.fillText(c.line, 18, 148);
+
+      g.fillStyle = s.mute;
+      g.font = "11px Bahnschrift, sans-serif";
+      g.fillText("wifi  87%", 18, 222);
+      g.fillStyle = s.ember;
+      g.fillRect(113, 230, 10, 4);
+      g.fillStyle = el.dataset.skin === "ember" ? "#2a2622" : s.mute;
+      g.fillRect(131, 230, 5, 4);
+    }
+
+    document.querySelectorAll(".puck").forEach((el) => {
+      el.dataset.i = "0";
+      paint(el, STATES[0]);
+      el.addEventListener("click", () => {
+        const n = (Number(el.dataset.i) + 1) % STATES.length;
+        el.dataset.i = String(n);
+        paint(el, STATES[n]);
+      });
+    });
+  </script>
+</body>
+</html>

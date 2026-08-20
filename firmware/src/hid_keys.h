@@ -1,0 +1,11 @@
+#pragma once
+void hid_init();
+void hid_loop();
+void hid_ptt_down();
+void hid_ptt_up();
+void hid_tap_enter();
+void hid_tap_esc();
+void hid_tap_n();
+void hid_shift_tab();
+bool hid_connected();
+bool hid_advertising();

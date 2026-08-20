@@ -1,0 +1,5 @@
+Lobe Icons @lobehub/icons-static-svg (unpkg latest)
+https://github.com/lobehub/lobe-icons
+
+USAGE prototype keeps coding set 1–35 only (~322 KB as 56×56 RGB565A8).
+Claude = claude-code.svg (Clawd). Codex = openai bloom.

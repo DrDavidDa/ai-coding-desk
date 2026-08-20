@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; background: #ff00ff; }
+  .row { display: flex; flex-wrap: nowrap; width: 1960px; height: 56px; }
+  .cell {
+    width: 56px; height: 56px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    background: #ff00ff;
+  }
+  .cell img { width: 56px; height: 56px; display: block; }
+  .cell.mono img { filter: brightness(0) invert(.96); }
+  .cell.ink img { filter: brightness(0) invert(.72); }
+</style>
+</head>
+<body>
+<div class="row" id="row"></div>
+<script>
+const BRANDS = [
+  ["codex", "logos/codex.svg", "mono"],
+  ["claude", "logos/claude-code.svg", ""],
+  ["deepseek", "logos/deepseek-color.svg", ""],
+  ["cursor", "logos/cursor.svg", "mono"],
+  ["glm", "logos/chatglm-color.svg", ""],
+  ["kimi", "logos/kimi.svg", "ink"],
+  ["trae", "logos/trae-color.svg", ""],
+  ["coze", "logos/coze-app-256.png", ""],
+  ["copilot", "logos/githubcopilot.svg", "mono"],
+  ["windsurf", "logos/windsurf.svg", "mono"],
+  ["mscopilot", "logos/copilot-color.svg", ""],
+  ["gemini", "logos/gemini-color.svg", ""],
+  ["antigravity", "logos/antigravity-color.svg", ""],
+  ["geminicli", "logos/geminicli.svg", "mono"],
+  ["junie", "logos/junie-color.svg", ""],
+  ["devin", "logos/devin-color.svg", ""],
+  ["replit", "logos/replit-color.svg", ""],
+  ["v0", "logos/v0.svg", "mono"],
+  ["lovable", "logos/lovable-color.svg", ""],
+  ["codebuddy", "logos/codebuddy-color.svg", ""],
+  ["qoder", "logos/qoder-color.svg", ""],
+  ["kiro", "logos/kiro-color.svg", ""],
+  ["amp", "logos/amp-color.svg", ""],
+  ["kilocode", "logos/kilocode.svg", "mono"],
+  ["cline", "logos/cline.svg", "mono"],
+  ["roocode", "logos/roocode.svg", "mono"],
+  ["opencode", "logos/opencode.svg", "mono"],
+  ["codegeex", "logos/codegeex-color.svg", ""],
+  ["phind", "logos/phind.svg", "mono"],
+  ["greptile", "logos/greptile-color.svg", ""],
+  ["poolside", "logos/poolside-color.svg", ""],
+  ["kwaipilot", "logos/kwaipilot-color.svg", ""],
+  ["goose", "logos/goose.svg", "mono"],
+  ["zencoder", "logos/zencoder-color.svg", ""],
+  ["aws", "logos/aws-color.svg", ""]
+];
+const row = document.getElementById("row");
+BRANDS.forEach(([id, src, kind]) => {
+  const cell = document.createElement("div");
+  cell.className = "cell" + (kind ? " " + kind : "");
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = id;
+  cell.appendChild(img);
+  row.appendChild(cell);
+});
+</script>
+</body>
+</html>
