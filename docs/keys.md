@@ -25,7 +25,10 @@ Use the computer keyboard for `n` and MODE.
 **Flip face-down**: mute dings, block talk/inject, RGB off. Backlight stays full on. Flip back up restores audio/RGB.
 **Knock the desk**: ignored. This panel has no useful backlight range; PWM stays 100%.
 
-Touch: DESK (顶栏发送/取消/讲话 + 麦克风/禁止圆钮；录音显示秒数并脉冲) swipe left → USAGE → compressor.
+Touch: DESK (顶栏发送/取消/讲话 + 麦克风/禁止圆钮；录音显示秒数并脉冲) swipe left → USAGE.
+Caps are **global** on every page: PLUS talks without forcing DESK; REC shows a top flash
+bar + timer pill when away from DESK. Swipe past last USAGE page does **not** open the game.
+Compressor easter egg: long-press SYNC (~1.2s) or tap USAGE title 5×.
 Swipe right on DESK stays. Logo tap opens PLAN; any swipe on PLAN returns to USAGE.
 Quota: 70% one ding, 90% one ding and again every 2 min. Lamp already goes red at 90%.
 PACK: tap or shake queues a press. Counter is `节省 {amt} 词元`, starts at 0K. Wood knock plays 35ms into the piston-down frame. Hold 1.4s to reset. Token count persists.

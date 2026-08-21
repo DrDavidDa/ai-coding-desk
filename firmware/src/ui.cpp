@@ -115,6 +115,14 @@ static lv_obj_t *sDeskBar = nullptr;
 static lv_obj_t *sLamp = nullptr;
 static lv_obj_t *sToast = nullptr;
 static lv_obj_t *sDots[2] = {};
+static lv_obj_t *sRecBar = nullptr;   /* global 2px REC chrome (any page) */
+static lv_obj_t *sRecPill = nullptr;
+static lv_obj_t *sRecPillLab = nullptr;
+static lv_obj_t *sUsageTitle = nullptr;
+static lv_obj_t *sSyncHit = nullptr;
+static uint32_t sSyncDownAt = 0;
+static uint8_t sUsageTitleTaps = 0;
+static uint32_t sUsageTitleTapAt = 0;
 
 static lv_obj_t *sCell[4] = {};
 static lv_obj_t *sMark[4] = {};
@@ -682,10 +690,49 @@ static void brand_sync_live() {
     }
 }
 
+static void open_pack_egg() {
+    if (ui_nav_blocked()) return;
+    sPackFromUsage = true;
+    sPage = PAGE_PACK;
+    show_current();
+    ui_toast("EGG");
+}
+
 static void on_sync(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_PRESSED) {
+        sSyncDownAt = millis();
+        return;
+    }
+    if (code == LV_EVENT_PRESS_LOST || code == LV_EVENT_RELEASED) {
+        uint32_t held = sSyncDownAt ? (millis() - sSyncDownAt) : 0;
+        sSyncDownAt = 0;
+        if (held >= 1200) {
+            open_pack_egg();
+            return;
+        }
+        if (code == LV_EVENT_RELEASED && held > 40 && held < 1200) {
+            ui_toast("SYNC");
+            net_poll_now(true);
+        }
+        return;
+    }
+    if (code == LV_EVENT_LONG_PRESSED) {
+        sSyncDownAt = 0;
+        open_pack_egg();
+    }
+}
+
+static void on_usage_title(lv_event_t *e) {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    ui_toast("SYNC");
-    net_poll_now(true);
+    uint32_t now = millis();
+    if (now - sUsageTitleTapAt > 900) sUsageTitleTaps = 0;
+    sUsageTitleTapAt = now;
+    sUsageTitleTaps++;
+    if (sUsageTitleTaps >= 5) {
+        sUsageTitleTaps = 0;
+        open_pack_egg();
+    }
 }
 
 static void on_talk(lv_event_t *e) {
@@ -696,10 +743,7 @@ static void on_talk(lv_event_t *e) {
         beep_click();
         ui_toast("SEND");
     } else if (!voice_is_busy()) {
-        if (sPage != PAGE_DESK) {
-            sPage = PAGE_DESK;
-            show_current();
-        }
+        /* Stay on current page — global REC chrome handles feedback. */
         voice_start(VOICE_SRC_TAP);
         beep_click();
         ui_toast("REC");
@@ -1235,13 +1279,22 @@ static void make_usage(lv_obj_t *scr) {
     lv_obj_t *k = make_label(scr, &lv_font_montserrat_12, C_MUTE);
     lv_label_set_text(k, "PLAN");
     lv_obj_align(k, LV_ALIGN_TOP_LEFT, 18, 12);
-    lv_obj_t *t = make_label(scr, &lv_font_montserrat_20, C_INK);
+    sUsageTitle = make_hit(scr, 100, 28, C_BG, on_usage_title);
+    lv_obj_set_style_bg_opa(sUsageTitle, LV_OPA_TRANSP, 0);
+    lv_obj_align(sUsageTitle, LV_ALIGN_TOP_LEFT, 14, 24);
+    lv_obj_t *t = lv_label_create(sUsageTitle);
     lv_label_set_text(t, "USAGE");
-    lv_obj_align(t, LV_ALIGN_TOP_LEFT, 18, 26);
+    lv_obj_set_style_text_font(t, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(t, C_INK, 0);
+    lv_obj_align(t, LV_ALIGN_LEFT_MID, 4, 0);
 
-    lv_obj_t *sync = make_hit(scr, 56, 28, C_BG, on_sync);
-    lv_obj_align(sync, LV_ALIGN_TOP_RIGHT, -10, 18);
-    lv_obj_t *sl = lv_label_create(sync);
+    sSyncHit = make_hit(scr, 56, 28, C_BG, nullptr);
+    lv_obj_align(sSyncHit, LV_ALIGN_TOP_RIGHT, -10, 18);
+    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_PRESSED, nullptr);
+    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_RELEASED, nullptr);
+    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_PRESS_LOST, nullptr);
+    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_LONG_PRESSED, nullptr);
+    lv_obj_t *sl = lv_label_create(sSyncHit);
     lv_label_set_text(sl, "SYNC");
     lv_obj_set_style_text_font(sl, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_color(sl, C_MUTE, 0);
@@ -1439,6 +1492,24 @@ void ui_init() {
     lv_obj_set_style_radius(sLamp, 4, 0);
     lv_obj_align(sLamp, LV_ALIGN_TOP_RIGHT, -10, 10);
 
+    sRecBar = make_rect(lv_layer_top(), 240, 2, C_HOT);
+    lv_obj_align(sRecBar, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_add_flag(sRecBar, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(sRecBar, LV_OBJ_FLAG_CLICKABLE);
+
+    sRecPill = make_rect(lv_layer_top(), 72, 22, lv_color_hex(0x161A22));
+    lv_obj_set_style_radius(sRecPill, 11, 0);
+    lv_obj_set_style_border_width(sRecPill, 1, 0);
+    lv_obj_set_style_border_color(sRecPill, lv_color_hex(0x2A303C), 0);
+    lv_obj_align(sRecPill, LV_ALIGN_TOP_MID, 0, 8);
+    lv_obj_add_flag(sRecPill, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(sRecPill, LV_OBJ_FLAG_CLICKABLE);
+    sRecPillLab = lv_label_create(sRecPill);
+    lv_label_set_text(sRecPillLab, "0.0");
+    lv_obj_set_style_text_font(sRecPillLab, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_color(sRecPillLab, C_INK, 0);
+    lv_obj_center(sRecPillLab);
+
     sToast = make_label(lv_layer_top(), &lv_font_montserrat_12, C_GOLD);
     lv_label_set_text(sToast, "");
     lv_obj_set_style_text_align(sToast, LV_TEXT_ALIGN_CENTER, 0);
@@ -1539,8 +1610,25 @@ void ui_refresh_from_status() {
     }
 
     if (sDeskBar) {
-        if (rec) lv_obj_clear_flag(sDeskBar, LV_OBJ_FLAG_HIDDEN);
+        if (rec && sPage == PAGE_DESK) lv_obj_clear_flag(sDeskBar, LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(sDeskBar, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (sRecBar) {
+        if (rec) lv_obj_clear_flag(sRecBar, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(sRecBar, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (sRecPill && sRecPillLab) {
+        if (rec && sPage != PAGE_DESK) {
+            uint32_t ms = voice_rec_ms();
+            char t[16];
+            snprintf(t, sizeof(t), "%u.%u", (unsigned)(ms / 1000), (unsigned)((ms / 100) % 10));
+            lv_label_set_text(sRecPillLab, t);
+            lv_obj_center(sRecPillLab);
+            lv_obj_clear_flag(sRecPill, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(sRecPill, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 
     paint_lamp();
@@ -1575,9 +1663,8 @@ void ui_next_page() {
             usage_paint();
             return;
         }
-        sPackFromUsage = true;
-        sPage = PAGE_PACK;
-        show_current();
+        /* Compressor is an easter egg — not on the main swipe path. */
+        ui_toast("END");
         return;
     }
 }
@@ -1657,6 +1744,7 @@ void ui_loop() {
             sBlinkAt = now;
             sBlinkOn = !sBlinkOn;
             if (sDeskBar) lv_obj_set_style_bg_opa(sDeskBar, sBlinkOn ? LV_OPA_COVER : LV_OPA_30, 0);
+            if (sRecBar) lv_obj_set_style_bg_opa(sRecBar, sBlinkOn ? LV_OPA_COVER : LV_OPA_30, 0);
             if (sTalkHalo) lv_obj_set_style_bg_opa(sTalkHalo, sBlinkOn ? LV_OPA_50 : LV_OPA_20, 0);
             if (sTalkBtn) {
                 lv_obj_set_style_bg_color(sTalkBtn,
@@ -1671,6 +1759,7 @@ void ui_loop() {
     } else if (!sBlinkOn) {
         sBlinkOn = true;
         if (sDeskBar) lv_obj_set_style_bg_opa(sDeskBar, LV_OPA_COVER, 0);
+        if (sRecBar) lv_obj_set_style_bg_opa(sRecBar, LV_OPA_COVER, 0);
         if (sTalkHalo) lv_obj_set_style_bg_opa(sTalkHalo, LV_OPA_30, 0);
         if (sLamp) lv_obj_set_style_bg_opa(sLamp, LV_OPA_COVER, 0);
     }
