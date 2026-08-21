@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://drdavidda.github.io/ai-coding-desk/desk154-live.html"><strong>⚡ 0 硬件 · 先点开玩 30 秒</strong></a>
+  <a href="https://drdavidda.github.io/ai-coding-desk/desk154-lab.html"><strong>⚡ 0 硬件 · 实验版高级 UI</strong></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/DrDavidDa/ai-coding-desk/stargazers">⭐ Star</a>
   &nbsp;·&nbsp;
@@ -116,7 +116,7 @@ pio run -e waveshare_lcd_154
 <details>
 <summary><b>3）零硬件</b></summary>
 
-只开 [Live Demo](https://drdavidda.github.io/ai-coding-desk/desk154-live.html)。可与本机 Host 同步额度。
+只开 [Lab Demo](https://drdavidda.github.io/ai-coding-desk/desk154-lab.html)。可与本机 Host 同步额度。
 </details>
 
 ---
@@ -158,5 +158,5 @@ Waveshare **ESP32-S3-Touch-LCD-1.54** · SKU **33869**
   <b>桌上多一盏额度灯，少切一次网页。</b><br/><br/>
   <a href="https://github.com/DrDavidDa/ai-coding-desk">⭐ Star this repo</a>
   &nbsp;·&nbsp;
-  <a href="https://drdavidda.github.io/ai-coding-desk/desk154-live.html">▶ Play the demo</a>
+  <a href="https://drdavidda.github.io/ai-coding-desk/desk154-lab.html">▶ Play the lab demo</a>
 </p>
