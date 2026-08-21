@@ -33,7 +33,7 @@
 > 我把 Claude / Cursor / Codex 的额度做成了一块桌上的小屏。  
 > Logo 本身就是剩余额度环。按住说话，字打进 Cursor。  
 > Cookie 不进板子。0 硬件也能玩原型：  
-> https://drdavidda.github.io/ai-coding-desk/desk154-live.html  
+> https://drdavidda.github.io/ai-coding-desk/desk154-lab.html  
 > Repo：https://github.com/DrDavidDa/ai-coding-desk
 
 发完回来点个 Star —— 你的转发是这个项目活下去的理由。
@@ -77,7 +77,9 @@ Desk154：**开源 · 有屏 · 额度可见 · 语音可进对话框**。
 
 不用板子。打开就滑、就点麦、就进 PLAN：
 
-### 👉 [desk154-live.html · 240×240 交互原型](https://drdavidda.github.io/ai-coding-desk/desk154-live.html)
+### 👉 [desk154-lab.html · 实验版高级 UI](https://drdavidda.github.io/ai-coding-desk/desk154-lab.html)
+
+（[旧暖色原型](https://drdavidda.github.io/ai-coding-desk/desk154-live.html) 仍可对比。）
 
 玩完把链接丢群里 / 小红书 / V2EX / Twitter。  
 「截图 + 上面那段文案」= 完整传播包。
