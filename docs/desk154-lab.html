@@ -3,178 +3,115 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Desk154 Lab · Premium UI</title>
-  <meta name="description" content="实验版 UI 质感预览：效果图级配色与控件，保留 Desk154 信息架构。" />
+  <title>Desk154 Lab · 方案 1 预览</title>
+  <meta name="description" content="DESK 主场 · Logo 额度 · 全局物理键轻反馈 · 压缩机彩蛋" />
   <style>
     :root {
-      --bg: #07080a;
-      --surface: #10131a;
-      --well: #161a22;
+      --bg: #0b0d10;
+      --surface: #161a22;
+      --well: #1c212b;
       --line: #2a303c;
       --ink: #f4f6f8;
       --mute: #8b93a1;
       --dim: #5c6573;
       --accent: #e8a04a;
       --hot: #e07050;
-      --claude: #d97757;
-      --cursor: #e8ecf0;
-      --codex: #5eead4;
-      --track: #252a33;
-      --desk: #0a0b0e;
       --talk: #7ec8ff;
+      --track: #252a33;
+      --desk: #07080a;
+      --gold: #e8a04a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       min-height: 100%;
       background:
-        radial-gradient(ellipse 70% 45% at 70% 20%, rgba(232,160,74,.12), transparent 55%),
-        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(94,234,212,.06), transparent 50%),
+        radial-gradient(ellipse 60% 40% at 75% 15%, rgba(232,160,74,.1), transparent 55%),
         var(--desk);
       color: var(--ink);
       font-family: "SF Pro Display", "Segoe UI Variable Display", Bahnschrift, "PingFang SC", "Microsoft YaHei", sans-serif;
     }
-    body { padding: 36px 28px 80px; }
-    .hero { max-width: 980px; margin: 0 auto 28px; }
-    .kicker {
-      font-size: 11px; letter-spacing: .28em; text-transform: uppercase;
-      color: var(--mute);
-    }
-    h1 {
-      margin-top: 10px; font-weight: 500; font-size: clamp(26px, 4vw, 40px);
-      letter-spacing: -.03em; line-height: 1.15;
-    }
-    .lede {
-      margin-top: 12px; max-width: 40em; color: var(--mute);
-      font-size: 15px; line-height: 1.6;
-    }
+    body { padding: 32px 28px 72px; }
+    .hero { max-width: 960px; margin: 0 auto 22px; }
+    .kicker { font-size: 11px; letter-spacing: .26em; text-transform: uppercase; color: var(--mute); }
+    h1 { margin-top: 8px; font-weight: 500; font-size: clamp(24px, 3.5vw, 34px); letter-spacing: -.03em; }
+    .lede { margin-top: 10px; max-width: 46em; color: var(--mute); font-size: 14px; line-height: 1.6; }
     .lede b { color: var(--ink); font-weight: 500; }
-    .links { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
-    .links a {
-      color: var(--accent); text-decoration: none; font-size: 13px;
-      letter-spacing: .04em; border-bottom: 1px solid rgba(232,160,74,.35);
-      padding-bottom: 2px;
-    }
+    .links { margin-top: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+    .links a { color: var(--accent); font-size: 13px; text-decoration: none; border-bottom: 1px solid rgba(232,160,74,.35); }
 
-    .stage {
-      display: flex; gap: 48px; flex-wrap: wrap; align-items: flex-start;
-      max-width: 1100px; margin: 0 auto;
-    }
+    .stage { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; max-width: 1100px; margin: 0 auto; }
 
-    /* Device bezel — cinematic frame */
     .device {
       width: 288px; padding: 18px;
       background: linear-gradient(145deg, #1a1d24, #0d0f14);
       border-radius: 28px;
-      box-shadow:
-        0 0 0 1px #2c313c,
-        0 30px 60px rgba(0,0,0,.55),
-        inset 0 1px 0 rgba(255,255,255,.06);
+      box-shadow: 0 0 0 1px #2c313c, 0 28px 56px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
       position: relative;
     }
-    .device::before, .device::after,
-    .device .screw-tl, .device .screw-tr, .device .screw-bl, .device .screw-br {
-      content: ""; position: absolute; width: 8px; height: 8px;
-      border-radius: 50%; background: radial-gradient(circle at 35% 35%, #c5c9d1, #6a707c);
-      box-shadow: inset 0 0 0 1px #3a3f4a;
-    }
-    .screw-tl, .device::before { top: 10px; left: 10px; }
-    .screw-tr, .device::after { content: none; }
-    .screw-tr { top: 10px; right: 10px; }
-    .screw-bl { bottom: 10px; left: 10px; }
-    .screw-br { bottom: 10px; right: 10px; }
+    .screw { position: absolute; width: 8px; height: 8px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #c5c9d1, #6a707c); }
+    .screw.tl { top: 10px; left: 10px; } .screw.tr { top: 10px; right: 10px; }
+    .screw.bl { bottom: 10px; left: 10px; } .screw.br { bottom: 10px; right: 10px; }
 
     .puck-wrap { width: 480px; height: 480px; }
     .puck {
-      width: 240px; height: 240px;
-      transform: scale(2);
-      transform-origin: top left;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-      background: #000;
-      touch-action: none;
-      user-select: none;
+      width: 240px; height: 240px; transform: scale(2); transform-origin: top left;
+      border-radius: 6px; overflow: hidden; position: relative; background: #000;
+      touch-action: none; user-select: none;
     }
-    .page { position: absolute; inset: 0; display: none; background: #000; }
+    .puck.dark .page, .puck.dark .toast, .puck.dark .rec-chrome { opacity: 0; pointer-events: none; }
+    .puck.prone::after {
+      content: "MUTE"; position: absolute; inset: 0; z-index: 12;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; letter-spacing: .2em; color: var(--dim); background: #050607;
+    }
+    .page { position: absolute; inset: 0; display: none; background: var(--bg); }
     .page.on { display: block; }
 
-    /* —— HOME (mock recreation) —— */
-    .home-top {
-      position: absolute; left: 14px; right: 14px; top: 12px;
-      display: flex; align-items: center; justify-content: space-between;
-      z-index: 2;
+    /* Global recording chrome — any page */
+    .rec-chrome {
+      position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 15;
+      background: transparent; pointer-events: none;
     }
-    .home-title {
-      font-size: 11px; letter-spacing: .12em; font-weight: 500;
-      color: var(--ink);
+    .puck.recording .rec-chrome {
+      background: var(--hot);
+      animation: blink .8s step-end infinite;
+      box-shadow: 0 0 10px rgba(224,112,80,.45);
     }
-    .home-status { display: flex; align-items: center; gap: 8px; color: var(--mute); }
-    .home-status svg { width: 14px; height: 14px; fill: currentColor; opacity: .9; }
-    .gauges {
-      position: absolute; left: 8px; right: 8px; top: 48px;
-      display: flex; justify-content: space-between; gap: 4px;
+    .rec-pill {
+      position: absolute; left: 50%; top: 8px; transform: translateX(-50%);
+      z-index: 16; display: none; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(22,26,34,.92); border: 1px solid var(--line);
+      font-size: 11px; letter-spacing: .08em; color: var(--ink);
+      font-variant-numeric: tabular-nums; pointer-events: none;
     }
-    .gauge {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      min-width: 0;
-    }
-    .gauge .name {
-      font-size: 8px; letter-spacing: .14em; color: var(--mute);
-      margin-bottom: 6px; font-weight: 500;
-    }
-    .ring {
-      position: relative; width: 64px; height: 64px;
-      filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ring) 35%, transparent));
-    }
-    .ring svg { width: 64px; height: 64px; transform: rotate(-90deg); }
-    .ring .track { fill: none; stroke: var(--track); stroke-width: 5; }
-    .ring .fill {
-      fill: none; stroke: var(--ring); stroke-width: 5;
-      stroke-linecap: round;
-      stroke-dasharray: 163.36;
-      stroke-dashoffset: calc(163.36 * (1 - var(--pct) / 100));
-      transition: stroke-dashoffset .6s ease;
-    }
-    .ring .pct {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 500; letter-spacing: -.02em;
-      color: var(--ink); transform: none;
-      font-variant-numeric: tabular-nums;
-    }
-    .gauge .quota {
-      margin-top: 8px; text-align: center;
-      font-size: 7px; letter-spacing: .06em; color: var(--dim);
-      line-height: 1.35; max-width: 72px;
-    }
-    .gauge .quota b { display: block; color: var(--mute); font-weight: 400; }
-
-    /* bottom nav */
-    .nav {
-      position: absolute; left: 0; right: 0; bottom: 0; height: 44px;
-      display: flex; align-items: flex-start; justify-content: space-around;
-      padding-top: 8px;
-      background: linear-gradient(180deg, transparent, rgba(0,0,0,.85) 30%);
-      z-index: 5;
-    }
-    .nav button {
-      width: 44px; height: 28px; border: 0; background: transparent;
-      color: var(--dim); cursor: pointer; position: relative;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .nav button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
-    .nav button.on { color: var(--ink); }
-    .nav button.on::after {
-      content: ""; position: absolute; left: 12px; right: 12px; bottom: -2px;
-      height: 2px; border-radius: 1px; background: var(--accent);
-      box-shadow: 0 0 8px rgba(232,160,74,.55);
+    .puck.recording.away .rec-pill { display: flex; }
+    .rec-pill i {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--hot);
+      animation: blink .8s step-end infinite;
     }
 
-    /* —— DESK / TALK (our layout, lab skin) —— */
+    .toast {
+      position: absolute; left: 16px; right: 16px; top: 36px; z-index: 17;
+      text-align: center; font-size: 11px; letter-spacing: .18em;
+      color: var(--accent); opacity: 0; pointer-events: none; transition: opacity .15s;
+    }
+    .toast.on { opacity: 1; }
+
+    .status {
+      position: absolute; right: 10px; top: 10px; z-index: 4;
+      display: flex; align-items: center; gap: 7px; color: var(--dim);
+    }
+    .status svg { width: 12px; height: 12px; fill: currentColor; }
+    #page-desk .status, #page-usage .status { top: 48px; }
+    #page-usage .status { display: none; }
+
+    /* DESK */
     .key-row { position: absolute; left: 0; top: 8px; width: 240px; height: 34px; z-index: 3; }
     .key-chip {
-      position: absolute; top: 0; width: 70px; height: 34px;
-      border-radius: 10px; background: var(--surface); color: var(--ink);
-      border: 1px solid var(--line);
+      position: absolute; top: 0; width: 70px; height: 34px; border-radius: 10px;
+      background: var(--surface); color: var(--ink); border: 1px solid var(--line);
       display: flex; align-items: center; justify-content: center;
       font-size: 12px; letter-spacing: .06em; cursor: pointer;
       font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -189,219 +126,229 @@
       font-variant-numeric: tabular-nums; letter-spacing: -.02em;
     }
     #page-desk.recording .rec-timer { display: block; }
-    .desk-bar {
-      position: absolute; left: 0; top: 0; width: 240px; height: 2px;
-      background: transparent; pointer-events: none;
-    }
-    #page-desk.recording .desk-bar {
-      background: var(--hot);
-      animation: blink .8s step-end infinite;
-    }
-    @keyframes blink { 50% { opacity: .25; } }
     .acts { position: absolute; left: 0; top: 100px; width: 240px; height: 110px; }
     .talk-halo {
       position: absolute; left: 18px; top: 0; width: 116px; height: 116px;
-      border-radius: 58px; background: var(--accent); opacity: .22; display: none;
+      border-radius: 58px; background: var(--accent); opacity: .2; display: none;
     }
     #page-desk.recording .talk-halo { display: block; }
-    #page-desk.recording.pulse .talk-halo { opacity: .4; }
-    .hit {
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; user-select: none;
-    }
+    #page-desk.recording.pulse .talk-halo { opacity: .38; }
+    .hit { display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .talk {
-      position: absolute; left: 26px; top: 8px;
-      width: 100px; height: 100px; border-radius: 50px;
-      background: var(--accent); color: #111;
-      box-shadow: 0 0 20px rgba(232,160,74,.25);
+      position: absolute; left: 26px; top: 8px; width: 100px; height: 100px; border-radius: 50px;
+      background: var(--accent); color: #111; box-shadow: 0 0 18px rgba(232,160,74,.22);
     }
     #page-desk.recording .talk { background: var(--well); color: var(--ink); box-shadow: none; }
     #page-desk.recording.pulse .talk { color: var(--talk); }
     .stop {
-      position: absolute; left: 134px; top: 8px;
-      width: 100px; height: 100px; border-radius: 50px;
+      position: absolute; left: 134px; top: 8px; width: 100px; height: 100px; border-radius: 50px;
       background: var(--well); color: var(--mute); border: 1px solid var(--line);
     }
     #page-desk.recording .stop, #page-desk.running .stop {
       background: var(--hot); color: #fff; border-color: transparent;
     }
     .talk svg, .stop svg { width: 34px; height: 34px; fill: currentColor; pointer-events: none; }
+    .dots {
+      position: absolute; left: 0; right: 0; bottom: 10px;
+      display: flex; justify-content: center; gap: 8px; pointer-events: none;
+    }
+    .dots i { display: block; height: 3px; width: 6px; background: var(--track); border-radius: 1px; }
+    .dots i.on { width: 14px; background: var(--accent); box-shadow: 0 0 6px rgba(232,160,74,.4); }
 
-    /* —— USAGE —— */
-    .usage-head {
-      position: absolute; left: 14px; top: 12px; right: 60px;
-    }
-    .usage-head .k {
-      font-size: 9px; letter-spacing: .2em; color: var(--dim); text-transform: uppercase;
-    }
-    .usage-head .t {
-      font-size: 16px; color: var(--ink); margin-top: 2px; letter-spacing: .04em; font-weight: 500;
-    }
+    /* USAGE */
+    .usage-head { position: absolute; left: 14px; top: 12px; cursor: default; }
+    .usage-head .k { font-size: 9px; letter-spacing: .2em; color: var(--dim); }
+    .usage-head .t { font-size: 16px; letter-spacing: .06em; color: var(--ink); margin-top: 2px; font-weight: 500; }
     .sync {
-      position: absolute; right: 10px; top: 14px;
+      position: absolute; right: 10px; top: 16px;
       font-size: 10px; letter-spacing: .14em; color: var(--accent); cursor: pointer;
+      padding: 6px 8px; user-select: none;
     }
     .grid {
-      position: absolute; left: 10px; top: 52px; width: 220px; height: 140px;
+      position: absolute; left: 10px; top: 52px; width: 220px; height: 148px;
       display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px;
     }
+    .grid.n1, .grid.n2 { display: flex; align-items: center; justify-content: center; gap: 28px; }
+    .grid.n3 { display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 8px 20px; }
     .cell { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
     .mark {
       width: 52px; height: 52px; position: relative; border-radius: 12px;
       background: var(--surface); border: 1px solid var(--line); overflow: hidden;
     }
-    .mark .icon { position: absolute; inset: 0; }
-    .mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
-    .mark .g { filter: grayscale(1) brightness(.55); position: absolute; inset: 0; }
+    .mark .g { filter: grayscale(1) brightness(.5); position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
     .mark .c {
       position: absolute; left: 0; right: 0; bottom: 0;
       height: var(--remain, 50%); overflow: hidden;
     }
     .mark .c img {
-      position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 52px;
-      object-fit: contain;
+      position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 52px; object-fit: contain;
     }
-    .mark.mono .g, .mark.mono .c img { filter: brightness(0) invert(.92); }
-    .mark.mono .g { opacity: .35; filter: brightness(0) invert(.45); }
+    .mark.mono .g { filter: brightness(0) invert(.4); }
+    .mark.mono .c img { filter: brightness(0) invert(.92); }
     .cd {
-      margin-top: 4px; font-size: 8px; letter-spacing: .08em; color: var(--dim);
-      font-variant-numeric: tabular-nums;
+      margin-top: 4px; font-size: 8px; letter-spacing: .06em; color: var(--dim);
+      font-variant-numeric: tabular-nums; text-align: center; min-height: 10px;
     }
+    .cd.warn { color: var(--accent); }
+    .cd.hot { color: var(--hot); }
+    .pager {
+      position: absolute; left: 0; right: 0; bottom: 4px; height: 28px;
+      display: none; align-items: center; justify-content: center; gap: 8px; z-index: 4;
+    }
+    .pager .arr { width: 32px; height: 28px; display: flex; align-items: center; justify-content: center;
+      color: var(--accent); font-size: 18px; cursor: pointer; }
+    .pager .dot { width: 5px; height: 5px; background: var(--track); border-radius: 1px; }
+    .pager .dot.on { width: 12px; background: var(--accent); }
+    .pager .num { font-size: 10px; color: var(--dim); letter-spacing: .08em; min-width: 40px; text-align: center; }
 
-    /* —— PLAN —— */
+    /* PLAN */
     .plan .back {
-      position: absolute; left: 8px; top: 10px; width: 32px; height: 32px;
-      border: 0; background: transparent; color: var(--accent);
+      position: absolute; left: 6px; top: 8px; width: 36px; height: 36px;
+      border: 0; background: transparent; color: var(--brand, var(--accent));
       font-size: 22px; cursor: pointer; z-index: 2;
     }
     .plan .nm {
       position: absolute; left: 42px; top: 12px; font-size: 14px; font-weight: 500;
-      letter-spacing: .04em; color: var(--brand, var(--ink));
+      letter-spacing: .04em; color: var(--ink);
     }
     .plan .upd {
       position: absolute; left: 42px; top: 32px; font-size: 9px;
       letter-spacing: .12em; color: var(--dim);
     }
     .plan .ghost {
-      position: absolute; right: -4px; top: 40px; width: 100px; height: 100px; opacity: .12;
-      pointer-events: none;
+      position: absolute; right: -4px; top: 44px; width: 100px; height: 100px; opacity: .1; pointer-events: none;
     }
     .plan .ghost img { width: 100%; height: 100%; object-fit: contain; }
+    .plan.mono .ghost img { filter: brightness(0) invert(.9); }
     .plan .bars { position: absolute; left: 14px; right: 14px; top: 64px; }
     .bar-row { margin-bottom: 14px; }
     .bar-lab {
-      display: flex; justify-content: space-between; align-items: baseline;
-      font-size: 9px; letter-spacing: .16em; color: var(--mute);
+      display: flex; justify-content: space-between; font-size: 9px;
+      letter-spacing: .16em; color: var(--mute);
     }
     .bar-lab b {
       color: var(--brand, var(--accent)); font-weight: 500; font-size: 12px;
-      letter-spacing: .02em; font-variant-numeric: tabular-nums;
+      font-variant-numeric: tabular-nums;
     }
-    .bar-track {
-      height: 3px; background: var(--track); margin-top: 7px; border-radius: 2px; overflow: hidden;
-    }
+    .bar-track { height: 3px; background: var(--track); margin-top: 7px; border-radius: 2px; overflow: hidden; }
     .bar-fill {
       height: 3px; width: 0; background: var(--brand, var(--accent)); border-radius: 2px;
-      box-shadow: 0 0 8px color-mix(in srgb, var(--brand, var(--accent)) 40%, transparent);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--brand, var(--accent)) 35%, transparent);
     }
     .plan .foot {
-      position: absolute; left: 14px; right: 14px; bottom: 48px;
+      position: absolute; left: 14px; right: 14px; bottom: 16px;
       font-size: 10px; letter-spacing: .12em; color: var(--dim);
     }
     .plan .foot b { color: var(--accent); font-weight: 500; }
 
-    /* —— GEAR —— */
-    .gear-body { position: absolute; left: 16px; right: 16px; top: 48px; }
-    .gear-body h2 {
-      font-size: 11px; letter-spacing: .2em; color: var(--dim); margin-bottom: 14px;
+    /* IDLE */
+    .idle { background: #07080a; }
+    .idle-top {
+      position: absolute; left: 16px; right: 16px; top: 22px;
+      display: flex; align-items: baseline; gap: 8px;
     }
-    .kv {
-      display: flex; justify-content: space-between; padding: 10px 0;
-      border-bottom: 1px solid var(--line); font-size: 12px;
+    .idle-date { flex: 1; font-size: 14px; color: var(--dim); letter-spacing: .14em; }
+    .idle-bat { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .idle-time {
+      position: absolute; left: 14px; top: 68px; width: 212px;
+      font-size: 52px; letter-spacing: -.04em; color: var(--ink);
+      font-variant-numeric: tabular-nums;
     }
-    .kv span { color: var(--mute); }
-    .kv b { color: var(--ink); font-weight: 500; }
-    .btn-sync {
-      margin-top: 20px; width: 100%; height: 36px; border: 0; border-radius: 10px;
-      background: var(--accent); color: #111; font-size: 12px; letter-spacing: .14em;
-      cursor: pointer; font-weight: 600;
+    .idle-wx { position: absolute; left: 16px; top: 132px; font-size: 18px; color: var(--mute); }
+    .idle-hint { position: absolute; left: 16px; right: 16px; bottom: 18px; font-size: 11px; color: var(--dim); letter-spacing: .1em; }
+
+    /* PACK easter egg */
+    .pack { background: #000; cursor: pointer; }
+    .pack-stage { position: absolute; inset: 0; }
+    .pack-frame {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: fill; image-rendering: pixelated;
+      opacity: 0; pointer-events: none;
+      transition: opacity 35ms steps(1, end);
+    }
+    .pack-frame.active { opacity: 1; }
+    .pack-stage.press .pack-frame.active { filter: brightness(1.08); transform: translateY(1px); }
+    .pack-counter {
+      position: absolute; left: 0; right: 0; top: 10px; height: 28px;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      color: #fff8e8; font-weight: 700; z-index: 3; pointer-events: none; font-size: 12px;
+    }
+    .pack-counter .amt { color: #ffe04e; font-size: 18px; min-width: 3em; text-align: center; }
+    .pack-plus {
+      position: absolute; left: 0; right: 0; top: 38px; text-align: center;
+      color: #74ff7a; font-weight: 700; font-size: 15px; opacity: 0; z-index: 4; pointer-events: none;
+    }
+    .pack-plus.show { animation: packPop 320ms steps(5, end); }
+    @keyframes packPop {
+      0% { opacity: 0; transform: translateY(6px); }
+      20% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+    .pack-queue {
+      position: absolute; right: 14px; bottom: 42px; display: flex; gap: 3px; z-index: 5; pointer-events: none;
+    }
+    .pack-queue i { width: 5px; height: 14px; background: #ffd42a; }
+    .pack-hit {
+      position: absolute; left: 22%; right: 22%; bottom: 9%; height: 14%;
+      border: 0; background: transparent; cursor: pointer; z-index: 6;
+    }
+    .pack-exit {
+      position: absolute; left: 8px; top: 8px; z-index: 7;
+      font-size: 10px; letter-spacing: .12em; color: rgba(255,255,255,.45); cursor: pointer;
+      padding: 6px;
     }
 
-    .toast {
-      position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
-      padding: 8px 14px; border-radius: 8px; background: rgba(22,26,34,.92);
-      border: 1px solid var(--line); font-size: 11px; letter-spacing: .16em;
-      color: var(--ink); opacity: 0; pointer-events: none; z-index: 20;
-      transition: opacity .2s;
-    }
-    .toast.on { opacity: 1; }
+    @keyframes blink { 50% { opacity: .25; } }
 
-    .side { width: min(400px, 100%); padding-top: 8px; }
-    .side .panel {
+    .side { width: min(400px, 100%); }
+    .panel {
       background: var(--surface); border: 1px solid var(--line);
-      border-radius: 16px; padding: 18px 18px 16px;
+      border-radius: 16px; padding: 16px 18px;
     }
-    .side h3 {
-      font-size: 11px; letter-spacing: .2em; color: var(--dim);
-      text-transform: uppercase; margin-bottom: 12px;
-    }
-    .caps { display: flex; gap: 8px; margin-bottom: 14px; }
+    .panel h3 { font-size: 11px; letter-spacing: .2em; color: var(--dim); margin-bottom: 10px; text-transform: uppercase; }
+    .caps { display: flex; gap: 8px; margin-bottom: 12px; }
     .cap {
-      flex: 1; height: 40px; border: 0; border-radius: 10px;
-      background: var(--well); color: var(--ink); border: 1px solid var(--line);
-      font-size: 13px; cursor: pointer;
+      flex: 1; height: 40px; border-radius: 10px; border: 1px solid var(--line);
+      background: var(--well); color: var(--ink); font-size: 13px; cursor: pointer;
       font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
     }
     .cap.primary { background: var(--accent); color: #111; border-color: transparent; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .chip {
+      height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line);
+      background: var(--well); color: var(--mute); font-size: 11px; letter-spacing: .08em; cursor: pointer;
+    }
+    .chip.on { color: var(--accent); border-color: var(--accent); }
     .hint { font-size: 13px; color: var(--mute); line-height: 1.55; }
     .hint b { color: var(--ink); font-weight: 500; }
-    .swatch {
-      display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;
-    }
-    .swatch i {
-      width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line);
-      display: block;
-    }
+    .hint code { font-size: 11px; color: var(--accent); }
   </style>
 </head>
 <body>
   <div class="hero">
-    <div class="kicker">Desk154 Lab · Experimental UI</div>
-    <h1>效果图级质感 · 现有信息架构</h1>
+    <div class="kicker">Desk154 Lab · Scheme 1</div>
+    <h1>说话主场 · Logo 额度 · 全局键 · 彩蛋游戏</h1>
     <p class="lede">
-      冷炭黑、琥珀强调、细轨圆环、底栏下划线——从效果图提炼的 UI 语言。
-      <b>首页</b>复刻三环仪表；<b>聊 / 图 / 设置</b>仍是发送·麦禁·USAGE·PLAN，只换皮肤。
+      任意页按侧边 <b>发送 / 取消 / 讲话</b> 都生效；录音时<strong>不切页</strong>，只闪顶条 + 浮层秒数。
+      压缩机不在主导航——长按 <code>SYNC</code> 或连点 USAGE 标题 5 次进入。
     </p>
     <div class="links">
-      <a href="desk154-live.html">对比旧暖色原型 →</a>
+      <a href="desk154-live.html">对比旧暖色原型</a>
       <a href="https://github.com/DrDavidDa/ai-coding-desk">GitHub</a>
     </div>
   </div>
 
   <div class="stage">
     <div class="device">
-      <span class="screw-tl"></span><span class="screw-tr"></span>
-      <span class="screw-bl"></span><span class="screw-br"></span>
+      <span class="screw tl"></span><span class="screw tr"></span>
+      <span class="screw bl"></span><span class="screw br"></span>
       <div class="puck-wrap">
         <div class="puck" id="puck">
+          <div class="rec-chrome" id="recChrome"></div>
+          <div class="rec-pill" id="recPill"><i></i><span id="recPillT">0.0</span></div>
           <div class="toast" id="toast"></div>
 
-          <!-- HOME -->
-          <div class="page on" id="page-home">
-            <div class="home-top">
-              <div class="home-title">ESP32 AI CODER</div>
-              <div class="home-status">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.243 4.243 0 00-6 0zm-4-4l2 2a7.07 7.07 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4zM15 19H9V6h6v13z"/></svg>
-              </div>
-            </div>
-            <div class="gauges" id="gauges"></div>
-            <div class="nav" data-page="home"></div>
-          </div>
-
-          <!-- DESK / TALK -->
-          <div class="page" id="page-desk">
-            <div class="desk-bar"></div>
+          <div class="page on" id="page-desk">
             <div class="key-row">
               <div class="key-chip" id="keyBoot">发送</div>
               <div class="key-chip" id="keyPwr">取消</div>
@@ -417,21 +364,20 @@
                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31A7.9 7.9 0 0112 20zm6.31-3.1L7.1 5.69A7.9 7.9 0 0112 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>
               </div>
             </div>
-            <div class="nav" data-page="desk"></div>
+            <div class="dots"><i class="on"></i><i></i></div>
           </div>
 
-          <!-- USAGE -->
           <div class="page" id="page-usage">
-            <div class="usage-head">
+            <div class="usage-head" id="usageTitle">
               <div class="k">PLAN</div>
               <div class="t">USAGE</div>
             </div>
             <div class="sync" id="sync">SYNC</div>
             <div class="grid" id="grid"></div>
-            <div class="nav" data-page="usage"></div>
+            <div class="pager" id="pager"></div>
+            <div class="dots"><i></i><i class="on"></i></div>
           </div>
 
-          <!-- PLAN -->
           <div class="page plan" id="page-plan">
             <button class="back" id="planBack" type="button">‹</button>
             <div class="nm" id="planName"></div>
@@ -439,22 +385,34 @@
             <div class="ghost"><img id="planGhostImg" alt="" /></div>
             <div class="bars" id="planBars"></div>
             <div class="foot" id="planFoot"></div>
-            <div class="nav" data-page="plan"></div>
           </div>
 
-          <!-- GEAR -->
-          <div class="page" id="page-gear">
-            <div class="home-top">
-              <div class="home-title">SETTINGS</div>
+          <div class="page idle" id="page-idle">
+            <div class="idle-top">
+              <div class="idle-date" id="idleDate"></div>
+              <div class="idle-bat" id="idleBat">81%</div>
             </div>
-            <div class="gear-body">
-              <h2>SYSTEM</h2>
-              <div class="kv"><span>Wi‑Fi</span><b id="kvWifi">Xiaomi_403A</b></div>
-              <div class="kv"><span>Host</span><b id="kvHost">OK</b></div>
-              <div class="kv"><span>Battery</span><b id="kvBat">81%</b></div>
-              <button class="btn-sync" id="btnSync" type="button">SYNC NOW</button>
+            <div class="idle-time" id="idleTime">09:41</div>
+            <div class="idle-wx" id="idleWx">晴  24°</div>
+            <div class="idle-hint">触碰或按键唤醒</div>
+          </div>
+
+          <div class="page pack" id="page-pack">
+            <div class="pack-exit" id="packExit">‹ BACK</div>
+            <div class="pack-stage" id="packStage">
+              <img class="pack-frame active" draggable="false" src="assets/compressor/01-idle.png" alt="">
+              <img class="pack-frame" draggable="false" src="assets/compressor/03-feeding.png" alt="">
+              <img class="pack-frame" draggable="false" src="assets/compressor/04-compressing.png" alt="">
+              <img class="pack-frame" draggable="false" src="assets/compressor/02-reward.png" alt="">
+              <div class="pack-counter">
+                <span>节省</span>
+                <span class="amt" id="packTotal">0K</span>
+                <span>词元</span>
+              </div>
+              <div class="pack-plus" id="packPlus">+1.2K</div>
+              <div class="pack-queue" id="packQueue"></div>
+              <button class="pack-hit" id="packHit" type="button" aria-label="压缩"></button>
             </div>
-            <div class="nav" data-page="gear"></div>
           </div>
         </div>
       </div>
@@ -462,253 +420,339 @@
 
     <div class="side">
       <div class="panel">
-        <h3>Caps · L→R</h3>
+        <h3>Caps · 全局 · L→R</h3>
         <div class="caps">
-          <button class="cap" id="boot">发送</button>
-          <button class="cap" id="pwr">取消</button>
-          <button class="cap primary" id="plus">讲话</button>
+          <button class="cap" id="boot" type="button">发送</button>
+          <button class="cap" id="pwr" type="button">取消</button>
+          <button class="cap primary" id="plus" type="button">讲话</button>
+        </div>
+        <div class="row">
+          <button class="chip" id="shake" type="button">SHAKE</button>
+          <button class="chip" id="flip" type="button">FLIP</button>
+          <button class="chip" id="idleBtn" type="button">IDLE</button>
+          <button class="chip" id="eggHint" type="button">? 彩蛋</button>
         </div>
         <p class="hint">
-          底栏四键：<b>码</b> 三环首页 · <b>聊</b> TALK · <b>图</b> USAGE · <b>齿轮</b> 设置。
-          点 USAGE logo 进入 PLAN（细轨 5H/7D/1M）。
+          左滑 DESK→USAGE；点 Logo→PLAN。录音中仍可看额度/敲木鱼。
+          彩蛋：长按屏上 <b>SYNC</b> ~1.2s，或连点 <b>USAGE</b> 标题 5 次。
         </p>
-        <div class="swatch" title="Lab tokens">
-          <i style="background:#07080a"></i>
-          <i style="background:#161a22"></i>
-          <i style="background:#e8a04a"></i>
-          <i style="background:#d97757"></i>
-          <i style="background:#5eead4"></i>
-          <i style="background:#e8ecf0"></i>
-        </div>
       </div>
     </div>
   </div>
 
+  <script src="compressor-game.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
     const S = {
-      view: "home",
+      view: "desk",
       rec: false,
       recAt: 0,
       toastUntil: 0,
+      usagePage: 0,
       planId: "",
-      pulse: false,
+      lastAct: performance.now(),
+      agent: "idle",
+      prone: false,
+      titleTaps: 0,
+      titleTapAt: 0,
+      syncHold: 0,
     };
 
-    const GAUGES = [
-      { id: "claude", name: "CLAUDE", remain: 78, used: 1560, cap: 2000, color: "var(--claude)" },
-      { id: "cursor", name: "CURSOR", remain: 42, used: 840, cap: 2000, color: "var(--cursor)" },
-      { id: "codex", name: "CODEX", remain: 65, used: 1300, cap: 2000, color: "var(--codex)" },
-    ];
-
+    function brandDim(hex) {
+      const h = hex.replace("#", "");
+      const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+      const n = parseInt(full.slice(0, 6), 16);
+      return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + ",.2)";
+    }
+    const REMAIN = [52, 47, 100, 0, 76, 48];
+    function fill(b, i) {
+      const remain = b.remain != null ? b.remain : REMAIN[i % REMAIN.length];
+      const used = 100 - remain;
+      return Object.assign({
+        on: b.id !== "deepseek",
+        remain,
+        h5: b.id === "cursor" ? 0 : (b.id === "claude" ? null : used),
+        d7: b.id === "cursor" ? 0 : (b.id === "claude" ? null : Math.min(100, used + 8)),
+        d30: b.id === "glm" ? 24 : null,
+        yuanCents: b.id === "claude" ? 219 : null,
+        upd: "今天 " + String(8 + (i % 3)).padStart(2, "0") + ":" + String(10 + i * 7 % 50).padStart(2, "0"),
+        dim: brandDim(b.color),
+      }, b);
+    }
     const BRANDS = [
-      { id: "codex", name: "CODEX", src: "logos/codex.svg", remain: 50, mono: true, color: "#E8ECF0", upd: "09:12", h5: 50, d7: 43, d30: 35 },
-      { id: "claude", name: "CLAUDE CODE", src: "logos/claude-code.svg", remain: 100, color: "#D97757", upd: "10:04", yuanCents: 219, h5: null, d7: null, d30: null },
-      { id: "cursor", name: "CURSOR", src: "logos/cursor.svg", remain: 0, mono: true, color: "#E8ECF0", upd: "09:40", h5: 100, d7: 100, d30: null },
-      { id: "glm", name: "GLM", src: "logos/chatglm-color.svg", remain: 0, color: "#4A7DFF", upd: "10:01", h5: 100, d7: 0, d30: 76 },
-    ];
+      { id: "codex", name: "CODEX", src: "logos/codex.svg", mono: true, color: "#E8ECF0" },
+      { id: "claude", name: "CLAUDE CODE", src: "logos/claude-code.svg", color: "#D97757", remain: 100 },
+      { id: "cursor", name: "CURSOR", src: "logos/cursor.svg", mono: true, color: "#E8ECF0", remain: 100 },
+      { id: "glm", name: "GLM", src: "logos/chatglm-color.svg", color: "#4A7DFF", remain: 76 },
+      { id: "kimi", name: "KIMI", src: "logos/kimi.svg", mono: true, color: "#C4B8A8" },
+      { id: "trae", name: "TRAE", src: "logos/trae-color.svg", color: "#32F08C" },
+      { id: "coze", name: "COZE", src: "logos/coze-app-256.png", color: "#6B4CFF" },
+      { id: "copilot", name: "COPILOT", src: "logos/githubcopilot.svg", mono: true, color: "#E8ECF0" },
+    ].map(fill);
 
-    const NAV_SVG = {
-      code: '<svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
-      chat: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
-      chart: '<svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
-      gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>',
-    };
-
+    function active() { return BRANDS.filter((b) => b.on); }
+    function pages() { return Math.max(1, Math.ceil(active().length / 4)); }
+    function touch() { S.lastAct = performance.now(); }
     function toast(msg) {
-      S.toastUntil = performance.now() + 1200;
+      S.toastUntil = performance.now() + 1100;
       const el = $("toast");
       el.textContent = msg;
       el.classList.add("on");
     }
 
-    function paintNav() {
-      document.querySelectorAll(".nav").forEach((nav) => {
-        const active = nav.getAttribute("data-page");
-        const map = { home: "code", desk: "chat", usage: "chart", plan: "chart", gear: "gear" };
-        const cur = map[S.view] || map[active];
-        nav.innerHTML =
-          '<button type="button" data-go="home" class="' + (cur === "code" ? "on" : "") + '">' + NAV_SVG.code + "</button>" +
-          '<button type="button" data-go="desk" class="' + (cur === "chat" ? "on" : "") + '">' + NAV_SVG.chat + "</button>" +
-          '<button type="button" data-go="usage" class="' + (cur === "chart" ? "on" : "") + '">' + NAV_SVG.chart + "</button>" +
-          '<button type="button" data-go="gear" class="' + (cur === "gear" ? "on" : "") + '">' + NAV_SVG.gear + "</button>";
+    function showPage() {
+      ["desk", "usage", "plan", "idle", "pack"].forEach((id) => {
+        $("page-" + id).classList.toggle("on", S.view === id);
       });
+      if (S.view === "idle") renderIdle();
+      if (S.view === "plan") renderPlan();
+      if (S.view === "usage") renderUsage();
     }
 
-    function show(view) {
+    function go(view) {
+      if (S.rec && (view === "idle")) return;
       S.view = view;
-      ["home", "desk", "usage", "plan", "gear"].forEach((id) => {
-        const el = $("page-" + id);
-        if (el) el.classList.toggle("on", id === view);
-      });
-      paintNav();
+      touch();
+      showPage();
     }
 
-    function fmtQuota(n) {
-      return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    function wake() {
+      go("desk");
     }
 
-    function paintGauges() {
-      const box = $("gauges");
-      box.innerHTML = GAUGES.map((g) => {
-        return (
-          '<div class="gauge" style="--ring:' + g.color + ";--pct:" + g.remain + '">' +
-            '<div class="name">' + g.name + "</div>" +
-            '<div class="ring">' +
-              '<svg viewBox="0 0 64 64">' +
-                '<circle class="track" cx="32" cy="32" r="26"/>' +
-                '<circle class="fill" cx="32" cy="32" r="26"/>' +
-              "</svg>" +
-              '<div class="pct">' + g.remain + "%</div>" +
-            "</div>" +
-            '<div class="quota">QUOTA<b>' + fmtQuota(g.used) + " / " + fmtQuota(g.cap) + "</b></div>" +
-          "</div>"
-        );
-      }).join("");
+    /* —— Navigation: DESK ↔ USAGE；PACK 不在主路径 —— */
+    function nextPage() {
+      if (S.rec) return;
+      if (S.view === "idle") { wake(); return; }
+      if (S.view === "plan") { go("usage"); return; }
+      if (S.view === "pack") { go("usage"); return; }
+      if (S.view === "desk") { S.usagePage = 0; go("usage"); return; }
+      if (S.view === "usage") {
+        if (S.usagePage < pages() - 1) { S.usagePage++; renderUsage(); return; }
+        toast("END"); /* 不再滑进游戏 */
+      }
+    }
+    function prevPage() {
+      if (S.rec) return;
+      if (S.view === "idle") { wake(); return; }
+      if (S.view === "plan") { go("usage"); return; }
+      if (S.view === "pack") { go("usage"); return; }
+      if (S.view === "usage") {
+        if (S.usagePage > 0) { S.usagePage--; renderUsage(); return; }
+        go("desk");
+      }
     }
 
-    function paintUsage() {
+    function openEgg() {
+      go("pack");
+      toast("EGG");
+    }
+
+    function renderUsage() {
+      const list = active();
+      const start = S.usagePage * 4;
+      const slice = list.slice(start, start + 4);
       const grid = $("grid");
+      grid.className = "grid n" + slice.length;
       grid.innerHTML = "";
-      BRANDS.forEach((b) => {
+      slice.forEach((b) => {
+        const remain = Math.max(0, Math.min(100, b.remain));
         const cell = document.createElement("div");
         cell.className = "cell";
-        const remain = Math.max(0, Math.min(100, b.remain));
+        const cdClass = remain <= 10 ? " hot" : remain <= 30 ? " warn" : "";
         cell.innerHTML =
           '<div class="mark' + (b.mono ? " mono" : "") + '" style="--remain:' + remain + '%">' +
-            '<div class="icon">' +
-              '<img class="g" alt="" src="' + b.src + '">' +
-              '<div class="c"><img alt="" src="' + b.src + '"></div>' +
-            "</div>" +
+            '<img class="g" alt="" src="' + b.src + '">' +
+            '<div class="c"><img alt="" src="' + b.src + '"></div>' +
           "</div>" +
-          '<div class="cd">' + (remain > 0 ? remain + "% · " + b.upd : "EMPTY") + "</div>";
-        cell.onclick = () => openPlan(b.id);
+          '<div class="cd' + cdClass + '">' + (remain > 0 ? remain + "% · " + b.upd.slice(-5) : "EMPTY") + "</div>";
+        cell.onclick = () => { S.planId = b.id; go("plan"); };
         grid.appendChild(cell);
       });
+      const pager = $("pager");
+      const n = pages();
+      if (n <= 1) { pager.style.display = "none"; return; }
+      pager.style.display = "flex";
+      let dots = "";
+      for (let i = 0; i < n; i++) dots += '<i class="dot' + (i === S.usagePage ? " on" : "") + '" data-page="' + i + '"></i>';
+      pager.innerHTML =
+        '<span class="arr" data-dir="-1">‹</span>' + dots +
+        '<span class="num">' + (S.usagePage + 1) + "/" + n + "</span>" +
+        '<span class="arr" data-dir="1">›</span>';
     }
 
-    function openPlan(id) {
-      const b = BRANDS.find((x) => x.id === id);
-      if (!b) return;
-      S.planId = id;
-      const page = $("page-plan");
-      page.style.setProperty("--brand", b.color);
+    function renderPlan() {
+      const b = BRANDS.find((x) => x.id === S.planId);
+      if (!b) { go("usage"); return; }
+      const el = $("page-plan");
+      el.style.setProperty("--brand", b.color);
+      el.classList.toggle("mono", !!b.mono);
       $("planName").textContent = b.name;
       $("planUpd").textContent = "UPD  " + b.upd;
       $("planGhostImg").src = b.src;
-      const yuanOnly = b.yuanCents != null;
+      const yuanOnly = b.yuanCents != null && b.id === "claude";
       let rows;
-      if (b.id === "cursor") rows = [["AUTO", b.h5], ["API", b.d7]].filter(([, v]) => v != null);
+      if (b.id === "cursor") rows = [["AUTO", b.h5], ["API", b.d7]];
       else if (yuanOnly) rows = [];
       else rows = [["5H", b.h5], ["7D", b.d7], ["1M", b.d30]];
-      $("planBars").innerHTML = rows.map(([lab, used]) => {
-        const remain = used == null ? null : Math.max(0, 100 - used);
-        const show = remain == null ? "—" : remain + "%";
-        const w = remain == null ? 0 : remain;
-        return (
-          '<div class="bar-row"><div class="bar-lab">' + lab + "<b>" + show + "</b></div>" +
-          '<div class="bar-track"><div class="bar-fill" style="width:' + w + '%"></div></div></div>'
-        );
+      $("planBars").innerHTML = rows.filter(([, v]) => v != null).map(([lab, used]) => {
+        const remain = Math.max(0, 100 - used);
+        return '<div class="bar-row"><div class="bar-lab">' + lab + "<b>" + remain + "%</b></div>" +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + remain + '%"></div></div></div>';
       }).join("");
       if (yuanOnly) {
         $("planFoot").innerHTML = "YUAN  <b>" + (b.yuanCents / 100).toFixed(2) + "</b>";
       } else {
         $("planFoot").innerHTML = "RESET  <b>— · —</b>";
       }
-      show("plan");
     }
 
+    function renderIdle() {
+      const now = new Date();
+      const wk = "日一二三四五六".charAt(now.getDay());
+      $("idleDate").textContent = (now.getMonth() + 1) + "." + now.getDate() + "  周" + wk;
+      $("idleTime").textContent =
+        String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+    }
+
+    /* —— Global caps: never require DESK —— */
     function startTalk() {
+      if (S.prone) { toast("MUTE"); return; }
+      if (S.view === "idle") wake();
       if (S.rec) { endTalk(true); return; }
       S.rec = true;
       S.recAt = performance.now();
-      show("desk");
-      $("page-desk").classList.add("recording");
       toast("REC");
+      /* stay on current page */
     }
     function endTalk(send) {
       if (!S.rec) return;
       S.rec = false;
-      $("page-desk").classList.remove("recording", "pulse");
       toast(send ? "SEND" : "CANCEL");
     }
+    function onBoot() {
+      if (S.view === "idle") { wake(); return; }
+      if (S.rec) { endTalk(true); return; }
+      toast("ENTER");
+    }
+    function onPwr() {
+      if (S.view === "idle") { wake(); return; }
+      if (S.rec) { endTalk(false); return; }
+      if (S.agent === "working") { S.agent = "idle"; toast("STOP"); return; }
+      if (S.view === "plan" || S.view === "pack") { go("usage"); return; }
+      toast("STOP");
+    }
+    function onPlus() {
+      if (S.view === "idle") wake();
+      startTalk();
+    }
 
-    document.querySelectorAll(".nav").forEach((nav) => {
-      nav.addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-go]");
-        if (!btn) return;
-        if (S.rec && btn.dataset.go !== "desk") endTalk(false);
-        show(btn.dataset.go);
-      });
+    const packGame = new DeskCompressor.Game();
+    packGame.attach({
+      stage: $("packStage"),
+      frames: Array.from(document.querySelectorAll(".pack-frame")),
+      total: $("packTotal"),
+      plus: $("packPlus"),
+      counter: document.querySelector(".pack-counter"),
+      queue: $("packQueue"),
     });
 
     $("talk").onclick = () => startTalk();
     $("stop").onclick = () => { if (S.rec) endTalk(false); else toast("STOP"); };
-    $("keyBoot").onclick = $("boot").onclick = () => { if (!S.rec) toast("ENTER"); };
-    $("keyPwr").onclick = $("pwr").onclick = () => {
-      if (S.rec) endTalk(false);
-      else toast("STOP");
-    };
-    $("keyPlus").onclick = () => startTalk();
-    $("plus").onmousedown = () => { S._plus = performance.now(); };
-    $("plus").onmouseup = () => {
-      if (performance.now() - (S._plus || 0) > 200) startTalk();
-    };
-    $("planBack").onclick = () => show("usage");
-    $("sync").onclick = $("btnSync").onclick = () => toast("SYNC");
+    $("keyBoot").onclick = onBoot;
+    $("keyPwr").onclick = onPwr;
+    $("keyPlus").onclick = onPlus;
+    $("boot").onclick = onBoot;
+    $("pwr").onclick = onPwr;
+    $("plus").onclick = onPlus;
 
-    function tick() {
+    $("planBack").onclick = () => go("usage");
+    $("packExit").onclick = () => go("usage");
+    $("packHit").onclick = () => packGame.press(performance.now());
+    $("page-idle").onclick = () => wake();
+
+    $("pager").onclick = (e) => {
+      const t = e.target.closest("[data-dir], [data-page]");
+      if (!t) return;
+      if (t.dataset.dir) { Number(t.dataset.dir) > 0 ? nextPage() : prevPage(); return; }
+      if (t.dataset.page != null) { S.usagePage = Number(t.dataset.page); renderUsage(); }
+    };
+
+    /* Easter egg: long-press SYNC */
+    const sync = $("sync");
+    sync.addEventListener("pointerdown", (e) => {
+      S.syncHold = performance.now();
+      const hold = S.syncHold;
+      setTimeout(() => {
+        if (S.syncHold === hold && S.syncHold > 0) openEgg();
+      }, 1200);
+    });
+    sync.addEventListener("pointerup", () => {
+      const held = performance.now() - S.syncHold;
+      S.syncHold = 0;
+      if (held < 1200) {
+        toast("SYNC");
+        fetch("http://127.0.0.1:8787/v1/status?key=desk-local").catch(() => {});
+      }
+    });
+    sync.addEventListener("pointerleave", () => { S.syncHold = 0; });
+
+    /* Easter egg: tap USAGE title ×5 */
+    $("usageTitle").onclick = () => {
       const now = performance.now();
+      if (now - S.titleTapAt > 900) S.titleTaps = 0;
+      S.titleTapAt = now;
+      S.titleTaps++;
+      if (S.titleTaps >= 5) { S.titleTaps = 0; openEgg(); }
+    };
+
+    $("eggHint").onclick = () => openEgg();
+    $("shake").onclick = () => {
+      if (S.rec) endTalk(false);
+      else if (S.view === "pack") packGame.press(performance.now());
+      else toast("SHAKE");
+    };
+    $("flip").onclick = () => {
+      S.prone = !S.prone;
+      $("flip").classList.toggle("on", S.prone);
+      $("puck").classList.toggle("prone", S.prone);
+    };
+    $("idleBtn").onclick = () => { if (!S.rec) go("idle"); };
+
+    /* swipe */
+    let sx = 0, sy = 0;
+    $("puck").addEventListener("pointerdown", (e) => { sx = e.clientX; sy = e.clientY; });
+    $("puck").addEventListener("pointerup", (e) => {
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) < 40 && Math.abs(dy) < 40) return;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) nextPage(); else prevPage();
+      }
+    });
+
+    function paint() {
+      const now = performance.now();
+      const puck = $("puck");
+      const desk = $("page-desk");
+      puck.classList.toggle("recording", S.rec);
+      puck.classList.toggle("away", S.rec && S.view !== "desk");
+      desk.classList.toggle("recording", S.rec);
+      desk.classList.toggle("pulse", S.rec && Math.floor(now / 400) % 2 === 0);
+      desk.classList.toggle("running", S.agent === "working");
       if (S.rec) {
-        $("recTimer").textContent = ((now - S.recAt) / 1000).toFixed(1);
-        $("page-desk").classList.toggle("pulse", Math.floor(now / 400) % 2 === 0);
+        const t = ((now - S.recAt) / 1000).toFixed(1);
+        $("recTimer").textContent = t;
+        $("recPillT").textContent = t;
       }
       if (now >= S.toastUntil) $("toast").classList.remove("on");
-      requestAnimationFrame(tick);
+      if (S.view === "pack") packGame.tick(now);
+      if (!S.rec && S.view !== "idle" && S.view !== "pack" && now - S.lastAct > 45000) go("idle");
+      requestAnimationFrame(paint);
     }
 
-    paintGauges();
-    paintUsage();
-    paintNav();
-    show("home");
-    tick();
-
-    // Optional: pull live remain into home gauges when host is up
-    fetch("http://127.0.0.1:8787/v1/status?key=desk-local")
-      .then((r) => r.json())
-      .then((d) => {
-        const p = d.providers || {};
-        function remainFrom(usedPct) {
-          if (usedPct == null) return null;
-          return Math.max(0, Math.min(100, 100 - usedPct));
-        }
-        const cl = p.claude || {};
-        const ds = p.deepseek || {};
-        const cu = p.cursor || {};
-        const co = p.codex || {};
-        if (cl.ok && (cl.h5 != null || cl.d7 != null)) {
-          const u = Math.max(cl.h5 || 0, cl.d7 || 0);
-          GAUGES[0].remain = remainFrom(u);
-          GAUGES[0].used = Math.round((u / 100) * 2000);
-        } else if (ds.ok) {
-          GAUGES[0].remain = (ds.daily_tokens || 0) > 0 ? 100 : 0;
-          GAUGES[0].used = 0;
-          GAUGES[0].cap = 2000;
-        }
-        if (cu.ok) {
-          const u = Math.max(cu.auto_pct || 0, cu.api_pct || 0);
-          GAUGES[1].remain = remainFrom(u);
-          GAUGES[1].used = Math.round((u / 100) * 2000);
-        }
-        if (co.ok && (co.h5 != null || co.d7 != null)) {
-          const u = Math.max(co.h5 || 0, co.d7 || 0);
-          GAUGES[2].remain = remainFrom(u);
-          GAUGES[2].used = Math.round((u / 100) * 2000);
-        }
-        paintGauges();
-        $("kvHost").textContent = "OK";
-      })
-      .catch(() => {});
+    renderUsage();
+    showPage();
+    paint();
   </script>
 </body>
 </html>
