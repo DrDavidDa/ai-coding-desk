@@ -8,9 +8,11 @@ from typing import Any
 import httpx
 
 from inject import clean_transcript, inject_transcript
+from paths import secrets_dir
 
 ROOT = Path(__file__).resolve().parent
 SF_CANDIDATES = [
+    secrets_dir() / "sf_api_key.txt",
     ROOT / "secrets" / "sf_api_key.txt",
     Path.home() / "Documents" / "PlatformIO" / "Projects" / "PaperColor_Study" / "sf_api_key.txt",
 ]
@@ -52,10 +54,14 @@ def transcribe_wav(wav: bytes) -> str:
         )
         r.raise_for_status()
         raw = r.text
-        print("[host] asr http", r.status_code, raw[:240])
+        # Windows console is often GBK — never let logging abort ASR/inject.
+        try:
+            print("[host] asr http", r.status_code, raw[:240])
+        except UnicodeEncodeError:
+            print("[host] asr http", r.status_code, raw[:240].encode("ascii", "backslashreplace").decode("ascii"))
         return parse_asr_json(r.json())
 
 
-def paste_text(text: str, target: str = "cursor", press_enter: bool = False, steal_focus: bool = False) -> dict:
+def paste_text(text: str, target: str = "auto", press_enter: bool = False, steal_focus: bool = False) -> dict:
     """Name kept for callers; implementation types Unicode into the dialog."""
     return inject_transcript(text, target=target, press_enter=press_enter, steal_focus=steal_focus)

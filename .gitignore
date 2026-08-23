@@ -18,3 +18,13 @@ firmware/src/fonts/*.ttc
 firmware/src/assets/logos/_preview/
 .tmp-bt-driver/
 build/
+
+.superpowers/
+
+# factory dumps / one-shot patch scripts
+firmware/_factory/
+firmware/boot_hdr.bin
+firmware/flash_hdr.bin
+firmware/tools/_*
+
+

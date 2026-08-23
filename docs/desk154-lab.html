@@ -330,7 +330,8 @@
     <h1>说话主场 · Logo 额度 · 全局键 · 彩蛋游戏</h1>
     <p class="lede">
       任意页按侧边 <b>发送 / 取消 / 讲话</b> 都生效；录音时<strong>不切页</strong>，只闪顶条 + 浮层秒数。
-      压缩机不在主导航——长按 <code>SYNC</code> 或连点 USAGE 标题 5 次进入。
+      压缩机不在主导航——长按屏上 <b>方块结束</b> 圆钮 ~1.2s，或连点 USAGE 标题 5 次进入。
+      右侧圆钮是结束录音（方块），不是取消；取消只用顶栏「取消」。
     </p>
     <div class="links">
       <a href="desk154-live.html">对比旧暖色原型</a>
@@ -360,8 +361,8 @@
               <div class="hit talk" id="talk">
                 <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg>
               </div>
-              <div class="hit stop" id="stop">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31A7.9 7.9 0 0112 20zm6.31-3.1L7.1 5.69A7.9 7.9 0 0112 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>
+              <div class="hit stop" id="stop" title="结束录音">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
               </div>
             </div>
             <div class="dots"><i class="on"></i><i></i></div>
@@ -434,7 +435,7 @@
         </div>
         <p class="hint">
           左滑 DESK→USAGE；点 Logo→PLAN。录音中仍可看额度/敲木鱼。
-          彩蛋：长按屏上 <b>SYNC</b> ~1.2s，或连点 <b>USAGE</b> 标题 5 次。
+          彩蛋：长按屏上 <b>方块结束</b> ~1.2s，或连点 <b>USAGE</b> 标题 5 次。
         </p>
       </div>
     </div>
@@ -455,7 +456,7 @@
       prone: false,
       titleTaps: 0,
       titleTapAt: 0,
-      syncHold: 0,
+      stopHold: 0,
     };
 
     function brandDim(hex) {
@@ -658,12 +659,9 @@
     });
 
     $("talk").onclick = () => startTalk();
-    $("stop").onclick = () => { if (S.rec) endTalk(false); else toast("STOP"); };
     $("keyBoot").onclick = onBoot;
-    $("keyPwr").onclick = onPwr;
     $("keyPlus").onclick = onPlus;
     $("boot").onclick = onBoot;
-    $("pwr").onclick = onPwr;
     $("plus").onclick = onPlus;
 
     $("planBack").onclick = () => go("usage");
@@ -678,24 +676,33 @@
       if (t.dataset.page != null) { S.usagePage = Number(t.dataset.page); renderUsage(); }
     };
 
-    /* Easter egg: long-press SYNC */
-    const sync = $("sync");
-    sync.addEventListener("pointerdown", (e) => {
-      S.syncHold = performance.now();
-      const hold = S.syncHold;
-      setTimeout(() => {
-        if (S.syncHold === hold && S.syncHold > 0) openEgg();
-      }, 1200);
-    });
-    sync.addEventListener("pointerup", () => {
-      const held = performance.now() - S.syncHold;
-      S.syncHold = 0;
-      if (held < 1200) {
-        toast("SYNC");
-        fetch("http://127.0.0.1:8787/v1/status?key=desk-local").catch(() => {});
-      }
-    });
-    sync.addEventListener("pointerleave", () => { S.syncHold = 0; });
+    /* Easter egg: long-press ban / 取消 */
+    function armStopEgg(el) {
+      el.addEventListener("pointerdown", () => {
+        S.stopHold = performance.now();
+        const hold = S.stopHold;
+        setTimeout(() => {
+          if (S.stopHold === hold && S.stopHold > 0 && !S.rec) openEgg();
+        }, 1200);
+      });
+      el.addEventListener("pointerup", () => {
+        const held = performance.now() - S.stopHold;
+        S.stopHold = 0;
+        if (held < 1200) {
+          if (S.rec) endTalk(true); /* square STOP = end & send */
+          else toast("STOP");
+        }
+      });
+      el.addEventListener("pointerleave", () => { S.stopHold = 0; });
+    }
+    armStopEgg($("stop"));
+    armStopEgg($("keyPwr"));
+    armStopEgg($("pwr"));
+
+    $("sync").onclick = () => {
+      toast("SYNC");
+      fetch("http://127.0.0.1:8787/v1/status?key=desk-local").catch(() => {});
+    };
 
     /* Easter egg: tap USAGE title ×5 */
     $("usageTitle").onclick = () => {

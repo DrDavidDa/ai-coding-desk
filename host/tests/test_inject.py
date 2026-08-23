@@ -220,3 +220,50 @@ def test_pwr_idle_coding_is_up():
 def test_pwr_other_app_is_sync():
     assert pwr_action("微信", "working") == "sync"
     assert pwr_action("Google Chrome") == "sync"
+
+
+def test_inject_stays_on_focused_coding_window(monkeypatch):
+    import inject as inj
+
+    remembered = []
+    monkeypatch.setattr(inj, "focused_info", lambda: ("cursor", "Cursor Agents", "cursor.exe"))
+    monkeypatch.setattr(inj.user32, "GetForegroundWindow", lambda: 111)
+    monkeypatch.setattr(inj, "remember_coding_hwnd", lambda hwnd=None: remembered.append(hwnd))
+    monkeypatch.setattr(inj, "focus_coding_window", lambda: (_ for _ in ()).throw(RuntimeError("no steal")))
+    monkeypatch.setattr(inj, "foreground_title", lambda: "Cursor Agents")
+    monkeypatch.setattr(inj, "type_into_focus", lambda text, press_enter=False: 4)
+    r = inj.inject_transcript("把登录改成 JWT", target="claude")
+    assert remembered == [111]
+    assert r["ok"] is True
+    assert r["target"] == "auto"
+    assert r["kind"] == "cursor"
+    assert r["method"] == "sendinput"
+    assert r["text"] == "把登录改成 JWT"
+
+
+def test_inject_restores_last_coding_window_when_other_app_focused(monkeypatch):
+    import inject as inj
+
+    stolen = []
+    monkeypatch.setattr(inj, "focused_info", lambda: ("other", "微信", "wechat.exe"))
+    monkeypatch.setattr(inj.user32, "GetForegroundWindow", lambda: 222)
+    monkeypatch.setattr(inj, "remember_coding_hwnd", lambda hwnd=None: None)
+    monkeypatch.setattr(inj, "focus_coding_window", lambda: stolen.append("coding") or True)
+    monkeypatch.setattr(inj, "foreground_title", lambda: "Cursor Agents")
+    monkeypatch.setattr(inj, "type_into_focus", lambda text, press_enter=False: 3)
+    monkeypatch.setattr(inj.time, "sleep", lambda *_a, **_k: None)
+    r = inj.inject_transcript("hello", target="cursor")
+    assert stolen == ["coding"]
+    assert r["ok"] is True
+    assert r["focused"] is True
+    assert r["target"] == "auto"
+    assert r["kind"] == "cursor"
+
+
+def test_pick_coding_hwnd_prefers_last_used(monkeypatch):
+    import inject as inj
+
+    inj._last_coding_hwnd = 42
+    monkeypatch.setattr(inj, "_is_coding_hwnd", lambda hwnd: hwnd == 42)
+    monkeypatch.setattr(inj, "_enum_windows", lambda: [(99, "Cursor Agents")])
+    assert inj._pick_coding_hwnd() == 42

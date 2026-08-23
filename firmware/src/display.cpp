@@ -1,6 +1,9 @@
 #include "display.h"
 #include "board.h"
 #include "status.h"
+#include "imu.h"
+#include "ui.h"
+#include <Arduino.h>
 #include <Wire.h>
 #include <esp_sleep.h>
 #include <esp_heap_caps.h>
@@ -15,24 +18,52 @@ static lv_disp_drv_t sDispDrv;
 static lv_indev_drv_t sIndevDrv;
 static uint8_t sBl = 100;
 static bool sSwallowTouch = false;
+static uint32_t sSwallowAt = 0;
 
 void display_apply_presence() {
     gStatus.screen_off = false;
     sBl = 100;
+    if (gGfx) gGfx->displayOn();
     display_set_backlight(100);
 }
 
+void display_blank() {
+    if (gStatus.screen_off) return;
+    gStatus.screen_off = true;
+    display_set_backlight(0);
+    if (gGfx) gGfx->displayOff();
+    display_swallow_until_release();
+    Serial.println("[DISP] blank");
+}
+
 void display_user_wake() {
+    if (!gStatus.screen_off) return;
     gStatus.screen_off = false;
+    if (gGfx) gGfx->displayOn();
+    sBl = 100;
+    display_set_backlight(100);
+    display_swallow_until_release();
+    Serial.println("[DISP] wake");
 }
 
 void display_swallow_until_release() {
     sSwallowTouch = true;
+    sSwallowAt = millis();
+}
+
+void display_clear_touch_swallow() {
+    sSwallowTouch = false;
+    sSwallowAt = 0;
 }
 
 void board_power_hold() {
+    /* Old builds could gpio_hold_en(BAT_EN) LOW — that latches across reset
+       until hold is cleared, so digitalWrite alone cannot revive the LCD rail. */
+    gpio_deep_sleep_hold_dis();
+    gpio_hold_dis((gpio_num_t)BAT_EN);
     pinMode(BAT_EN, OUTPUT);
     digitalWrite(BAT_EN, HIGH);
+    gpio_hold_dis((gpio_num_t)LCD_BL);
 }
 
 void board_power_off() {
@@ -52,6 +83,31 @@ void display_set_backlight(uint8_t pct) {
     ledcWrite(0, (uint32_t)pct * 255 / 100);
 }
 
+static uint32_t sTpReadyAt = 0;
+static bool sTpNeedRecover = false;
+
+void display_wire_begin() {
+    /* 100 kHz: CST816 + QMI8658 on one bus; 400 kHz wedges the ESP32 I2C FSM. */
+    Wire.begin(IIC_SDA, IIC_SCL, 100000);
+    Wire.setTimeOut(50);
+}
+
+static void tp_bus_recover() {
+    digitalWrite(TP_RST, LOW);
+    delay(8);
+    digitalWrite(TP_RST, HIGH);
+    delay(20);
+    Wire.end();
+    display_wire_begin();
+    sTpReadyAt = millis() + 200;
+    sTpNeedRecover = false;
+    Serial.println("[TP] wire reset");
+}
+
+void display_poll() {
+    if (sTpNeedRecover) tp_bus_recover();
+}
+
 void display_init() {
     board_power_hold();
     pinMode(LCD_BL, OUTPUT);
@@ -63,12 +119,14 @@ void display_init() {
     gGfx->begin(40000000);
     gGfx->fillScreen(BLACK);
 
+    pinMode(TP_INT, INPUT_PULLUP);
     pinMode(TP_RST, OUTPUT);
     digitalWrite(TP_RST, LOW);
     delay(10);
     digitalWrite(TP_RST, HIGH);
     delay(50);
-    Wire.begin(IIC_SDA, IIC_SCL, 400000);
+    display_wire_begin();
+    sTpReadyAt = millis() + 1500;
 
     analogReadResolution(12);
     pinMode(CHG_STAT_PIN, INPUT);
@@ -88,10 +146,16 @@ void display_init() {
     lv_indev_drv_init(&sIndevDrv);
     sIndevDrv.type = LV_INDEV_TYPE_POINTER;
     sIndevDrv.read_cb = touch_read;
+    sIndevDrv.scroll_limit = 22;   /* CST816 jitter was killing CLICKED */
+    sIndevDrv.gesture_limit = 55;
     lv_indev_drv_register(&sIndevDrv);
 }
 
 void lvgl_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
+    if (gStatus.screen_off) {
+        lv_disp_flush_ready(disp);
+        return;
+    }
     uint32_t w = (area->x2 - area->x1 + 1);
     uint32_t h = (area->y2 - area->y1 + 1);
     gGfx->draw16bitRGBBitmap(area->x1, area->y1, (uint16_t *)&color_p->full, w, h);
@@ -99,25 +163,64 @@ void lvgl_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
 }
 
 void touch_read(lv_indev_drv_t * /*indev*/, lv_indev_data_t *data) {
+    static uint8_t sFail = 0;
+    static uint16_t sHoldX = 0, sHoldY = 0;
+    static uint32_t sHoldAt = 0;
+    if (sTpNeedRecover || millis() < sTpReadyAt) {
+        data->state = LV_INDEV_STATE_REL;
+        return;
+    }
     Wire.beginTransmission(CST816_ADDR);
     Wire.write(0x02);
-    if (Wire.endTransmission(false) != 0) {
+    /* STOP then read — repeated-start (false) wedges the ESP32 I2C FSM
+       when CST816 NACKs, and that froze touch + keys + shake together. */
+    if (Wire.endTransmission() != 0) {
+        if (++sFail >= 8) {
+            sFail = 0;
+            sTpNeedRecover = true; /* do not delay() inside LVGL indev */
+        }
+        sHoldAt = 0;
         data->state = LV_INDEV_STATE_REL;
         return;
     }
     uint8_t buf[6] = {0};
     if (Wire.requestFrom((int)CST816_ADDR, 6) != 6) {
+        if (++sFail >= 8) {
+            sFail = 0;
+            sTpNeedRecover = true;
+        }
+        sHoldAt = 0;
         data->state = LV_INDEV_STATE_REL;
         return;
     }
+    sFail = 0;
     for (int i = 0; i < 6; i++) buf[i] = Wire.read();
     uint8_t points = buf[0] & 0x0F;
-    if (points == 0) {
-        sSwallowTouch = false;
+    if (gStatus.screen_off) {
+        /* Swallow leftover contact from the blanking press (thumb on glass
+           while holding PWR). Only a new touch after lift wakes. */
+        if (points == 0) {
+            sSwallowTouch = false;
+            sSwallowAt = 0;
+        } else if (!sSwallowTouch) {
+            ui_note_activity();
+        }
+        sHoldAt = 0;
         data->state = LV_INDEV_STATE_REL;
         return;
     }
-    if (sSwallowTouch || gStatus.prone) {
+    if (points == 0) {
+        sSwallowTouch = false;
+        sSwallowAt = 0;
+        sHoldAt = 0;
+        data->state = LV_INDEV_STATE_REL;
+        return;
+    }
+    if (sSwallowTouch && sSwallowAt && (millis() - sSwallowAt > 300)) {
+        sSwallowTouch = false;
+        sSwallowAt = 0;
+    }
+    if (sSwallowTouch) {
         data->state = LV_INDEV_STATE_REL;
         return;
     }
@@ -125,6 +228,26 @@ void touch_read(lv_indev_drv_t * /*indev*/, lv_indev_data_t *data) {
     uint16_t y = ((buf[3] & 0x0F) << 8) | buf[4];
     if (x >= LCD_WIDTH) x = LCD_WIDTH - 1;
     if (y >= LCD_HEIGHT) y = LCD_HEIGHT - 1;
+    if (gStatus.prone) imu_clear_prone();
+    if (sHoldAt == 0) {
+        sHoldAt = millis();
+        sHoldX = x;
+        sHoldY = y;
+    } else {
+        int dx = (int)x - (int)sHoldX;
+        int dy = (int)y - (int)sHoldY;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if (dx > 8 || dy > 8) {
+            sHoldAt = millis();
+            sHoldX = x;
+            sHoldY = y;
+        } else if (millis() - sHoldAt > 2500) {
+            /* CST816 ghost contact: LVGL stayed PRESSED and ignored new taps. */
+            data->state = LV_INDEV_STATE_REL;
+            return;
+        }
+    }
     data->point.x = x;
     data->point.y = y;
     data->state = LV_INDEV_STATE_PR;

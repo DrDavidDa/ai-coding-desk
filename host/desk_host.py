@@ -4,6 +4,7 @@ from __future__ import annotations
 import ctypes
 import json
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -13,7 +14,17 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-ROOT = Path(__file__).resolve().parent
+from paths import (
+    app_dir,
+    autostart_off_flag,
+    data_dir,
+    frozen as app_frozen,
+    host_log_path,
+    paired_flag,
+    secrets_dir,
+)
+
+ROOT = app_dir()
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -26,8 +37,8 @@ from collectors.kimi import fetch_kimi
 from collectors.trae import fetch_trae
 from collectors.agent import detect_cursor_agent
 
-HOST_KEY_FILE = ROOT / "secrets" / "host_key.txt"
-SNAPSHOT = ROOT / "data" / "snapshot.json"
+HOST_KEY_FILE = secrets_dir() / "host_key.txt"
+SNAPSHOT = data_dir() / "data" / "snapshot.json"
 DEFAULT_KEY = "desk-local"
 POLL_SEC = 60
 
@@ -35,7 +46,7 @@ _lock = threading.Lock()
 _state = {
     "ts": 0,
     "agent": {"state": "idle", "name": ""},
-    "voice": {"last_text": "", "target": "cursor"},
+    "voice": {"last_text": "", "target": "auto"},
     "providers": {
         "claude": {"ok": False, "err": "init"},
         "deepseek": {"ok": False, "err": "init"},
@@ -186,9 +197,9 @@ def agent_in(body: AgentIn, key: str = Query("")):
 async def audio_in(
     request: Request,
     key: str = Query(""),
-    target: str = Query("cursor"),
+    target: str = Query("auto"),
     send: int = Query(0),
-    focus: int = Query(0),
+    focus: int = Query(1),
 ):
     _check_key(key)
     wav = await request.body()
@@ -200,9 +211,10 @@ async def audio_in(
         text = transcribe_wav(wav)
     except Exception as exc:
         raise HTTPException(502, str(exc)) from exc
-    injected = paste_text(text, target=target, press_enter=bool(send), steal_focus=bool(focus))
+    injected = paste_text(text, target="auto", press_enter=bool(send), steal_focus=bool(focus))
+    kind = injected.get("kind") or "auto"
     with _lock:
-        _state["voice"] = {"last_text": injected.get("text") or text, "target": target, "fg": injected.get("fg", "")}
+        _state["voice"] = {"last_text": injected.get("text") or text, "target": kind, "fg": injected.get("fg", "")}
         _state["ts"] = int(time.time())
         save_snapshot()
     return {"ok": True, "text": injected.get("text") or text, "inject": injected}
@@ -210,7 +222,7 @@ async def audio_in(
 
 class InjectIn(BaseModel):
     text: str
-    target: str = "cursor"
+    target: str = "auto"
     send: bool = False
     focus: bool = False
 
@@ -221,9 +233,10 @@ def inject_in(body: InjectIn, key: str = Query("")):
     _check_key(key)
     from inject import inject_transcript
 
-    injected = inject_transcript(body.text, target=body.target, press_enter=body.send, steal_focus=body.focus)
+    injected = inject_transcript(body.text, target="auto", press_enter=body.send, steal_focus=body.focus)
+    kind = injected.get("kind") or "auto"
     with _lock:
-        _state["voice"] = {"last_text": injected.get("text") or "", "target": body.target, "fg": injected.get("fg", "")}
+        _state["voice"] = {"last_text": injected.get("text") or "", "target": kind, "fg": injected.get("fg", "")}
         _state["ts"] = int(time.time())
         save_snapshot()
     return injected
@@ -235,7 +248,7 @@ _stop_lock = threading.Lock()
 
 def _append_stop_log(line: str) -> None:
     try:
-        p = ROOT / "data" / "stop.log"
+        p = data_dir() / "data" / "stop.log"
         p.parent.mkdir(exist_ok=True)
         with p.open("a", encoding="utf-8") as f:
             f.write(f"{int(time.time())} {line}\n")
@@ -255,7 +268,7 @@ def request_stop(target: str | None = None) -> dict:
     from inject import stop_generation
 
     with _lock:
-        chosen = target or ((_state.get("voice") or {}).get("target") or "auto")
+        chosen = target or "auto"
     _append_stop_log(f"begin target={chosen}")
     result = stop_generation(chosen)
     _append_stop_log(f"done {result}")
@@ -268,39 +281,24 @@ def stop_in(key: str = Query(""), target: str = Query("cursor")):
     return request_stop(target)
 
 
-def process_wav_bytes(wav: bytes, target: str = "cursor") -> dict:
+def process_wav_bytes(wav: bytes, target: str = "auto") -> dict:
     from asr import paste_text, transcribe_wav
 
     text = transcribe_wav(wav)
-    injected = paste_text(text, target=target, press_enter=False, steal_focus=False)
+    injected = paste_text(text, target="auto", press_enter=False, steal_focus=True)
+    kind = injected.get("kind") or "auto"
     with _lock:
-        _state["voice"] = {"last_text": injected.get("text") or text, "target": target, "fg": injected.get("fg", "")}
+        _state["voice"] = {"last_text": injected.get("text") or text, "target": kind, "fg": injected.get("fg", "")}
         _state["ts"] = int(time.time())
         save_snapshot()
-    print("[host] asr", injected.get("text") or text)
+    _safe_print("[host] asr", injected.get("text") or text)
     return {"ok": True, "text": injected.get("text") or text, "inject": injected}
 
 
 def find_desk_port() -> str | None:
-    env = os.environ.get("DESK_SERIAL", "").strip()
-    if env:
-        return env
-    try:
-        from serial.tools import list_ports
-    except Exception:
-        return None
-    desk_mac = "28848556EEE0"
-    fallback = None
-    for p in list_ports.comports():
-        if (p.device or "").upper() in ("COM4", "COM6"):
-            continue
-        hwid = (p.hwid or "").upper().replace(":", "")
-        desc = (p.description or "") + (p.hwid or "")
-        if desk_mac in hwid:
-            return p.device
-        if p.vid == 0x303A or "303A" in desc or "JTAG/serial" in desc:
-            fallback = fallback or p.device
-    return fallback
+    from desk_pair import find_desk_port as _find
+
+    return _find(env_port=os.environ.get("DESK_SERIAL", "").strip() or None)
 
 
 STOP_MARKERS = ("#STOP", "[HID] Esc", "[HID] stop")
@@ -445,6 +443,7 @@ def _maybe_undo_from_line(txt: str) -> None:
 
 def serial_watch_loop() -> None:
     import serial as pyserial
+    from desk_pair import open_serial, serial_write
     global _kick_puck, _puck_need_usb
 
     while True:
@@ -454,26 +453,15 @@ def serial_watch_loop() -> None:
             continue
         print("[host] serial watch", port)
         try:
-            # USB-JTAG (303A:1001): DTR maps to GPIO0. Opening during boot or
-            # asserting DTR puts the puck in download mode (black screen).
+            # USB-JTAG (303A:1001): Windows RX needs DTR asserted. Never pulse DTR/RTS.
             time.sleep(2.5)
             port = find_desk_port() or port
-            ser = pyserial.Serial()
-            ser.port = port
-            ser.baudrate = 115200
-            ser.timeout = 0.5
-            ser.dtr = False
-            ser.rts = False
-            ser.open()
-            # App CDC needs DTR after boot; asserting it during strap = download/black.
-            time.sleep(0.4)
-            ser.dtr = True
-            ser.rts = False
-            time.sleep(0.25)
+            ser = open_serial(port)
             try:
-                ser.write(b"#STATUS\n")
-                ser.write(b"#POLL\n")
-                ser.write(f"#TIME {int(time.time())}\n".encode("ascii"))
+                serial_write(ser, b"#STATUS\n")
+                serial_write(ser, b"#WAKE\n")
+                serial_write(ser, b"#POLL\n")
+                serial_write(ser, f"#TIME {int(time.time())}\n".encode("ascii"))
             except Exception:
                 pass
             last_qj = 0.0
@@ -485,20 +473,20 @@ def serial_watch_loop() -> None:
                 if _kick_puck:
                     _kick_puck = False
                     try:
-                        ser.write(b"#POLL\n")
+                        serial_write(ser, b"#POLL\n")
                     except Exception as exc:
                         print("[host] poll", exc)
                 if now - last_qj >= 8:
                     last_qj = now
                     try:
-                        ser.write(quota_push_line())
+                        serial_write(ser, quota_push_line())
                         print("[host] usb quota")
                     except Exception as exc:
                         print("[host] qj", exc)
                 if now - last_time >= 60:
                     last_time = now
                     try:
-                        ser.write(f"#TIME {int(now)}\n".encode("ascii"))
+                        serial_write(ser, f"#TIME {int(now)}\n".encode("ascii"))
                     except Exception:
                         pass
                 line = ser.readline()
@@ -521,13 +509,13 @@ def serial_watch_loop() -> None:
                 print("[host] wav bytes", len(data), "expect", n)
                 if len(data) < 44:
                     continue
-                target = "cursor"
-                with _lock:
-                    target = (_state.get("voice") or {}).get("target") or "cursor"
                 try:
-                    process_wav_bytes(bytes(data[:n] if len(data) > n else data), target=target)
+                    out = process_wav_bytes(bytes(data[:n] if len(data) > n else data))
+                    text = (out.get("text") or "").replace("\r", " ").replace("\n", " ")[:180]
+                    if text:
+                        serial_write(ser, ("#TEXT|" + text + "\n").encode("utf-8"))
                 except Exception as exc:
-                    print("[host] asr fail", exc)
+                    _safe_print("[host] asr fail", exc)
                 del rest
         except Exception as exc:
             _safe_print("[host] serial", exc)
@@ -556,11 +544,35 @@ def run_tray() -> None:
         icon.stop()
         os._exit(0)
 
+    def on_pair_again(icon, item):
+        try:
+            paired_flag().unlink(missing_ok=True)
+        except OSError:
+            pass
+        if app_frozen():
+            cmd = 'cmd /c ping 127.0.0.1 -n 3 >nul & start "" "%s"' % sys.executable
+        else:
+            cmd = 'cmd /c ping 127.0.0.1 -n 3 >nul & start "" "%s" -u "%s"' % (
+                sys.executable,
+                ROOT / "desk_host.py",
+            )
+        subprocess.Popen(cmd, shell=True)
+        icon.stop()
+        os._exit(0)
+
+    def on_open_data(icon, item):
+        try:
+            os.startfile(data_dir())  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
     menu = pystray.Menu(
-        pystray.MenuItem("Refresh now", on_refresh),
-        pystray.MenuItem("Quit", on_quit),
+        pystray.MenuItem("刷新额度", on_refresh),
+        pystray.MenuItem("重新配对", on_pair_again),
+        pystray.MenuItem("打开数据文件夹", on_open_data),
+        pystray.MenuItem("退出", on_quit),
     )
-    pystray.Icon("desk154", img, "AI Coding Desk", menu).run()
+    pystray.Icon("desk154", img, "Desk154", menu).run()
 
 
 def _acquire_instance() -> bool:
@@ -575,32 +587,43 @@ def _acquire_instance() -> bool:
 def ensure_autostart() -> None:
     if os.environ.get("DESK_NO_AUTOSTART") == "1":
         return
-    startup = Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs/Startup"
-    if not startup.is_dir():
+    from setup_gui import apply_autostart
+
+    apply_autostart(not autostart_off_flag().is_file())
+
+
+def _redirect_frozen_log() -> None:
+    if not app_frozen():
         return
-    bat = startup / "desk154-host.bat"
-    body = (
-        "@echo off\r\n"
-        "set PYTHONUNBUFFERED=1\r\n"
-        f'cd /d "{ROOT}"\r\n'
-        f'start "desk154" /min "{sys.executable}" -u desk_host.py\r\n'
-    )
+    log = host_log_path()
     try:
-        if bat.is_file() and bat.read_text(encoding="utf-8") == body:
-            return
-        bat.write_text(body, encoding="utf-8")
-        print("[host] autostart", bat)
-    except Exception as exc:
-        print("[host] autostart skip", exc)
+        fh = open(log, "a", encoding="utf-8", buffering=1)
+        sys.stdout = fh
+        sys.stderr = fh
+    except Exception:
+        pass
+
+
+def _maybe_wizard() -> None:
+    if os.environ.get("DESK_SKIP_WIZARD") == "1" or os.environ.get("DESK_NO_TRAY") == "1":
+        return
+    force = "--pair" in sys.argv or os.environ.get("DESK_PAIR") == "1"
+    if not force and paired_flag().is_file():
+        return
+    from setup_gui import run_wizard
+
+    run_wizard()
 
 
 def main() -> None:
+    _redirect_frozen_log()
     if not _acquire_instance():
         print("[host] already running")
         return
+    _maybe_wizard()
     ensure_autostart()
-    (ROOT / "secrets").mkdir(exist_ok=True)
-    (ROOT / "data").mkdir(exist_ok=True)
+    secrets_dir().mkdir(exist_ok=True)
+    (data_dir() / "data").mkdir(exist_ok=True)
     if not HOST_KEY_FILE.is_file():
         HOST_KEY_FILE.write_text(DEFAULT_KEY, encoding="utf-8")
     load_snapshot()
@@ -608,10 +631,7 @@ def main() -> None:
     threading.Thread(target=refresh_once, daemon=True).start()
     threading.Thread(target=serial_watch_loop, daemon=True).start()
     def on_ble_wav(wav: bytes) -> None:
-        target = "cursor"
-        with _lock:
-            target = (_state.get("voice") or {}).get("target") or "cursor"
-        process_wav_bytes(wav, target=target)
+        process_wav_bytes(wav)
 
     if os.environ.get("DESK_BLE_AUDIO") == "1":
         try:

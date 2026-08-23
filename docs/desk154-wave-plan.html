@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Desk154 · Wave 全机规划</title>
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --ink: #f4f6fa;
+      --mute: #9aa3b2;
+      --line: #2a303c;
+      --accent: #ffb020;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse 50% 40% at 80% 0%, rgba(26,144,255,.18), transparent 55%), var(--bg);
+      color: var(--ink);
+      font-family: Bahnschrift, "Segoe UI Variable Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 36px 28px 72px;
+      line-height: 1.55;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .kicker { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--mute); }
+    h1 { margin-top: 8px; font-weight: 500; font-size: clamp(24px, 3.5vw, 34px); letter-spacing: -.03em; }
+    .lede { margin-top: 10px; color: var(--mute); max-width: 46em; font-size: 14px; }
+    .row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 28px; align-items: flex-start; }
+    .ref {
+      width: min(100%, 340px);
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      display: block;
+    }
+    .puck {
+      width: 240px; height: 240px; border-radius: 8px; overflow: hidden; position: relative; flex-shrink: 0;
+      background:
+        radial-gradient(ellipse 90% 70% at 20% 20%, #ffb020 0%, transparent 45%),
+        radial-gradient(ellipse 70% 80% at 85% 35%, #c42b8a 0%, transparent 50%),
+        linear-gradient(160deg, #1a90ff 0%, #0a3a7a 40%, #120818 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.15);
+    }
+    .puck .veil { position: absolute; inset: 0; background: rgba(8,10,18,.28); }
+    .caps { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; gap: 6px; z-index: 1; }
+    .caps span {
+      flex: 1; height: 26px; border-radius: 8px; background: rgba(255,255,255,.16);
+      color: #fff; font: 600 11px/26px system-ui; text-align: center;
+    }
+    .caps span.hot { background: rgba(255,200,80,.4); }
+    .btn {
+      position: absolute; top: 82px; width: 78px; height: 78px; border-radius: 50%; z-index: 1;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px;
+    }
+    .btn.mic { left: 28px; background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.55); }
+    .btn.stop { right: 28px; background: rgba(0,0,0,.4); border: 2px solid rgba(255,255,255,.35); }
+    .sq { width: 22px; height: 22px; border-radius: 4px; background: #fff; }
+    .sec {
+      position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; z-index: 1;
+      color: #fff; font: 600 28px Bahnschrift, system-ui; text-shadow: 0 2px 10px rgba(0,0,0,.5);
+    }
+    h2 { margin-top: 40px; font-size: 18px; font-weight: 500; }
+    .pages { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .page {
+      width: 120px; height: 120px; border-radius: 8px; position: relative; overflow: hidden;
+      background: linear-gradient(160deg, #1a90ff, #c42b8a 55%, #ffb020);
+    }
+    .page .d { position: absolute; inset: 0; }
+    .page .t {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #fff; font: 700 12px system-ui; z-index: 1; letter-spacing: .06em;
+    }
+    .cap { font-size: 11px; color: var(--mute); text-align: center; margin-top: 6px; }
+    ol { margin: 12px 0 0 20px; color: var(--mute); }
+    ol li { margin: 6px 0; }
+    ol b { color: var(--ink); font-weight: 500; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+    .box {
+      border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: rgba(255,255,255,.02);
+    }
+    .box h3 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .box ul { padding-left: 18px; color: var(--mute); font-size: 14px; }
+    .box li { margin: 4px 0; }
+    .note { margin-top: 28px; font-size: 13px; color: var(--mute); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="kicker">Desk154 · locked</p>
+    <h1>Wave 全机规划</h1>
+    <p class="lede">已锁：A Wave · 全机统一 · 每页同一静帧流体底。本页不依赖本地服务，可直接打开。</p>
+
+    <div class="row">
+      <img class="ref" src="assets/wave-ref-product.png" alt="产品参考图" onerror="this.style.display='none'" />
+      <div class="puck" aria-label="Talk Wave mock">
+        <div class="veil"></div>
+        <div class="caps">
+          <span>发送</span><span>取消</span><span class="hot">讲话</span>
+        </div>
+        <div class="btn mic">🎤</div>
+        <div class="btn stop"><div class="sq"></div></div>
+        <div class="sec">3.2</div>
+      </div>
+    </div>
+
+    <h2>四页同一底 · 不同蒙版</h2>
+    <div class="pages">
+      <div><div class="page"><div class="d" style="background:rgba(0,0,0,.22)"></div><div class="t">DESK</div></div><p class="cap">主场 22% 暗</p></div>
+      <div><div class="page"><div class="d" style="background:rgba(0,0,0,.42)"></div><div class="t">USAGE</div></div><p class="cap">额度 42% 暗</p></div>
+      <div><div class="page"><div class="d" style="background:rgba(0,0,0,.48)"></div><div class="t">PLAN</div></div><p class="cap">明细 48% 暗</p></div>
+      <div><div class="page"><div class="d" style="background:rgba(0,0,0,.55)"></div><div class="t">IDLE</div></div><p class="cap">息屏 55% 暗</p></div>
+    </div>
+
+    <h2>落地顺序</h2>
+    <ol>
+      <li><b>P0 皮肤</b> — 预烘 240×240 流体 RGB565 + token + 四页套底</li>
+      <li><b>P0 Talk</b> — 玻璃顶栏、白描边圆钮、录音光晕/秒数（右钮方块 STOP）</li>
+      <li><b>P1 动效</b> — 按压缩放、顶条脉冲、翻页 120ms 淡入（无流体动画）</li>
+      <li><b>P1 USAGE/PLAN</b> — Logo 玻璃瓦片、细白字、SYNC 琥珀</li>
+      <li><b>P2 手感</b> — IMU 甩撤销、RUN/IDLE、空闲 PWR=↑、短 beep</li>
+      <li><b>P3 以后</b> — 无线 Opus、喇叭播报、TF、灯带</li>
+    </ol>
+
+    <div class="grid2">
+      <div class="box">
+        <h3>会做</h3>
+        <ul>
+          <li>全机同一静帧 Wave 底</li>
+          <li>Talk 卖相拉到产品图级</li>
+          <li>方块 STOP = 结束并发送（铁律）</li>
+          <li>Flash 预算约一张底图</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>本里程碑不做</h3>
+        <ul>
+          <li>流体实时动画</li>
+          <li>Ember / Lab 混色</li>
+          <li>小智 / 板端 ASR / 第四套皮肤 env</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note">陪伴页服务空闲 30 分钟会自动关掉。日常请用本文件：<code>docs/desk154-wave-plan.html</code></p>
+  </div>
+</body>
+</html>

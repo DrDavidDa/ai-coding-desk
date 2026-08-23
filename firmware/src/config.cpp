@@ -22,6 +22,12 @@ void config_load() {
     gCfg.alert_threshold = gPrefs.getInt("alert", ALERT_THRESHOLD_DEFAULT);
     gPrefs.getString("vmode", gCfg.voice_mode, sizeof(gCfg.voice_mode));
     gPrefs.getString("vtarget", gCfg.voice_target, sizeof(gCfg.voice_target));
+    gCfg.wall_id = gPrefs.getUChar("wall", 0);
+    if (gCfg.wall_id >= 6) gCfg.wall_id = 0;
+    gCfg.idle_sec = gPrefs.getUShort("idle", 300);
+    if (gCfg.idle_sec == 180) gCfg.idle_sec = 300; /* old clock-idle default → 5 min blank */
+    gCfg.beep_vol = gPrefs.getUChar("bvol", 80);
+    if (gCfg.beep_vol > 100) gCfg.beep_vol = 80;
     if (!gCfg.voice_mode[0]) strncpy(gCfg.voice_mode, "device", sizeof(gCfg.voice_mode) - 1);
     if (!gCfg.voice_target[0]) strncpy(gCfg.voice_target, "cursor", sizeof(gCfg.voice_target) - 1);
     gPrefs.end();
@@ -45,6 +51,9 @@ void config_save() {
     gPrefs.putInt("alert", gCfg.alert_threshold);
     gPrefs.putString("vmode", gCfg.voice_mode);
     gPrefs.putString("vtarget", gCfg.voice_target);
+    gPrefs.putUChar("wall", gCfg.wall_id);
+    gPrefs.putUShort("idle", gCfg.idle_sec);
+    gPrefs.putUChar("bvol", gCfg.beep_vol);
     gPrefs.end();
     gWarnThreshold = gCfg.warn_threshold;
     gAlertThreshold = gCfg.alert_threshold;
@@ -76,6 +85,22 @@ static void set_kv(const char* k, const char* v) {
     else if (!strcmp(k, "alert_threshold")) gCfg.alert_threshold = atoi(v);
     else if (!strcmp(k, "voice_mode")) strncpy(gCfg.voice_mode, v, sizeof(gCfg.voice_mode) - 1);
     else if (!strcmp(k, "voice_target")) strncpy(gCfg.voice_target, v, sizeof(gCfg.voice_target) - 1);
+    else if (!strcmp(k, "wall_id")) {
+        int n = atoi(v);
+        if (n < 0) n = 0;
+        if (n > 5) n = 5;
+        gCfg.wall_id = (uint8_t)n;
+    } else if (!strcmp(k, "idle_sec")) {
+        int n = atoi(v);
+        if (n < 0) n = 0;
+        if (n > 3600) n = 3600;
+        gCfg.idle_sec = (uint16_t)n;
+    } else if (!strcmp(k, "beep_vol")) {
+        int n = atoi(v);
+        if (n < 0) n = 0;
+        if (n > 100) n = 100;
+        gCfg.beep_vol = (uint8_t)n;
+    }
 }
 
 void config_apply_line(const char* line) {
@@ -93,7 +118,7 @@ void config_dump_serial() {
     Serial.printf("wifi_ssid=%s\n", gCfg.wifi_ssid[0]);
     Serial.printf("host_url=%s\n", gCfg.host_url);
     Serial.printf("host_key_len=%u\n", (unsigned)strlen(gCfg.host_key));
-    Serial.printf("warn=%d alert=%d poll=%u voice=%s target=%s\n",
+    Serial.printf("warn=%d alert=%d poll=%u voice=%s target=%s wall=%u idle=%u beep_vol=%u\n",
                   gCfg.warn_threshold, gCfg.alert_threshold, gCfg.poll_quota_sec,
-                  gCfg.voice_mode, gCfg.voice_target);
+                  gCfg.voice_mode, gCfg.voice_target, gCfg.wall_id, gCfg.idle_sec, gCfg.beep_vol);
 }

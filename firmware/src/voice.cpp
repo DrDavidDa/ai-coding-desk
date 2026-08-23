@@ -26,6 +26,7 @@ static size_t sSendBytes = 0;
 static bool sRec = false;
 static bool sI2s = false;
 static volatile bool sBusy = false;
+static uint32_t sBusyAt = 0;
 static int sSkipBlocks = 0;
 static VoiceSource sSrc = VOICE_SRC_NONE;
 static uint32_t sRecT0 = 0;
@@ -183,8 +184,8 @@ static bool do_upload() {
     if (!ok && WiFi.status() == WL_CONNECTED) {
         HTTPClient http;
         char url[192];
-        snprintf(url, sizeof(url), "%s/v1/audio?key=%s&target=%s",
-                 gCfg.host_url, gCfg.host_key, gCfg.voice_target);
+        snprintf(url, sizeof(url), "%s/v1/audio?key=%s&target=auto",
+                 gCfg.host_url, gCfg.host_key);
         http.setTimeout(30000);
         if (http.begin(url)) {
             http.addHeader("Content-Type", "audio/wav");
@@ -248,6 +249,13 @@ void voice_start(VoiceSource src) {
 }
 
 void voice_loop() {
+    if (!sRec && sBusy && sBusyAt && (millis() - sBusyAt > 45000)) {
+        Serial.println("[VOICE] busy timeout");
+        sBusy = false;
+        sBusyAt = 0;
+        sSrc = VOICE_SRC_NONE;
+        strncpy(gStatus.agent_state, "idle", sizeof(gStatus.agent_state) - 1);
+    }
     if (!sRec || !sPcm) return;
     uint8_t tmp[1024];
     for (int spin = 0; spin < 16; spin++) {
@@ -314,7 +322,12 @@ void voice_cancel() {
 static void upload_task(void *) {
     bool ok = do_upload();
     sBusy = false;
+    sBusyAt = 0;
     sSrc = VOICE_SRC_NONE;
+    if (!ok) {
+        gStatus.last_text[0] = 0;
+        strncpy(gStatus.agent_state, "idle", sizeof(gStatus.agent_state) - 1);
+    }
     if (ok) beep_request(BEEP_OK);
     vTaskDelete(nullptr);
 }
@@ -344,6 +357,7 @@ void voice_stop_and_send(bool force) {
     }
     sSendBytes = sBytes;
     sBusy = true;
+    sBusyAt = millis();
     strncpy(gStatus.agent_state, "waiting", sizeof(gStatus.agent_state) - 1);
     if (xTaskCreate(upload_task, "asr", 12288, nullptr, 1, nullptr) != pdPASS) {
         Serial.println("[VOICE] upload task fail, sync");

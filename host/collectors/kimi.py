@@ -71,6 +71,7 @@ def _load_cred() -> tuple[Path | None, dict[str, Any]]:
     for p in (
         CRED,
         Path.home() / ".kimi" / "credentials" / "kimi-code.json",
+        __import__("paths").secrets_dir() / "kimi_token.txt",
         Path(__file__).resolve().parent.parent / "secrets" / "kimi_token.txt",
     ):
         if not p.is_file():

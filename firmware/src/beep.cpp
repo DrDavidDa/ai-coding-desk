@@ -2,6 +2,7 @@
 #include "board.h"
 #include "voice.h"
 #include "status.h"
+#include "config.h"
 #include "wood_pcm.h"
 #include <Wire.h>
 #include <Arduino.h>
@@ -159,13 +160,18 @@ static bool beep_begin() {
 
 static void write_pcm16(const int16_t *mono, int n) {
     int16_t stereo[128];
+    uint8_t vol = gCfg.beep_vol;
+    if (vol > 100) vol = 100;
     int i = 0;
     while (i < n) {
         int chunk = n - i > 64 ? 64 : n - i;
         for (int k = 0; k < chunk; k++) {
-            int16_t v = mono[i + k];
-            stereo[k * 2] = v;
-            stereo[k * 2 + 1] = v;
+            int32_t v = ((int32_t)mono[i + k] * (int32_t)vol) / 100;
+            if (v > 32767) v = 32767;
+            if (v < -32767) v = -32767;
+            int16_t s = (int16_t)v;
+            stereo[k * 2] = s;
+            stereo[k * 2 + 1] = s;
         }
         size_t wrote = 0;
         i2s_write(I2S_NUM_0, stereo, (size_t)chunk * 4, &wrote, portMAX_DELAY);

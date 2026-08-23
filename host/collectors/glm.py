@@ -12,7 +12,10 @@ QUOTA_URL = "https://open.bigmodel.cn/api/monitor/usage/quota/limit"
 MODEL_URL = "https://open.bigmodel.cn/api/monitor/usage/model-usage"
 TOOL_URL = "https://open.bigmodel.cn/api/monitor/usage/tool-usage"
 
+from paths import secrets_dir
+
 TOKEN_CANDIDATES = [
+    secrets_dir() / "zhipu_token.txt",
     Path(__file__).resolve().parent.parent / "secrets" / "zhipu_token.txt",
     Path(__file__).resolve().parent / "secrets" / "zhipu_token.txt",
     Path.home() / "Documents" / "PlatformIO" / "Projects" / "PaperColor_Study" / "zhipu_token.txt",

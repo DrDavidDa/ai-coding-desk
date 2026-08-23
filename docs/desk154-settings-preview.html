@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Desk154 · 壁纸 / 设置 对照</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=IBM+Plex+Sans+JP:wght@500;600&amp;display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #f7f4ef; --mute: rgba(247,244,239,.74); --dim: rgba(247,244,239,.46);
+      --amber: #ffb020; --hot: #ff6a4a; --desk: #07080c;
+      --display: "Outfit", Bahnschrift, sans-serif;
+      --cn: "IBM Plex Sans JP", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; color: var(--ink); font-family: var(--display);
+      background: radial-gradient(ellipse 50% 35% at 80% 0%, rgba(255,176,32,.14), transparent 55%), var(--desk);
+      padding: 28px 20px 90px;
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; }
+    .kicker { font-size: 11px; letter-spacing: .26em; text-transform: uppercase; color: var(--dim); }
+    h1 { margin-top: 8px; font-weight: 500; font-size: clamp(22px, 3.2vw, 34px); }
+    .lede { margin-top: 10px; max-width: 58em; color: var(--mute); font-size: 14px; line-height: 1.65; font-family: var(--cn); }
+    .lede b { color: var(--ink); }
+    .banner {
+      margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid rgba(255,176,32,.28); background: rgba(255,176,32,.08);
+      font-size: 13px; color: var(--mute); font-family: var(--cn); line-height: 1.55;
+    }
+    .banner b { color: var(--amber); }
+    h2 { margin-top: 36px; margin-bottom: 14px; font-size: 16px; font-weight: 600; }
+    .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px 18px; }
+    .slot .label { margin-bottom: 8px; font-size: 12px; color: var(--mute); font-family: var(--cn); }
+    .slot .label b { display: block; color: var(--ink); font-size: 14px; font-family: var(--display); font-weight: 600; margin-bottom: 2px; }
+    .screen {
+      width: 240px; height: 240px; border-radius: 8px; overflow: hidden; position: relative;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 18px 36px rgba(0,0,0,.4);
+    }
+    .ui { position: absolute; inset: 0; z-index: 2; }
+    .veil { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+    /* —— 壁纸：设备内嵌 PNG 对照 —— */
+    .wp-wave { background: #000 center/cover no-repeat url("assets/wall-wave-240.png"); }
+    .wp-ember { background: #000 center/cover no-repeat url("assets/wall-ember-240.png"); }
+    .wp-ink { background: #000 center/cover no-repeat url("assets/wall-ink-240.png"); }
+    .wp-phosphor { background: #000 center/cover no-repeat url("assets/wall-phosphor-240.png"); }
+    .wp-night { background: #000 center/cover no-repeat url("assets/wall-night-240.png"); }
+    .wp-stone { background: #000 center/cover no-repeat url("assets/wall-stone-240.png"); }
+
+    .keys { position: absolute; left: 8px; right: 8px; top: 8px; display: flex; gap: 6px; }
+    .chip {
+      flex: 1; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-family: var(--cn); font-weight: 600;
+      background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.4); color: #fff;
+    }
+    .chip.hot { background: rgba(255,176,32,.5); }
+    .acts { position: absolute; left: 0; top: 72px; width: 240px; height: 104px; display: flex; justify-content: center; align-items: center; gap: 18px; }
+    .hit {
+      width: 88px; height: 88px; border-radius: 44px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.65); color: #fff;
+    }
+    .hit.stop { background: rgba(0,0,0,.38); border-color: rgba(255,255,255,.45); }
+    .hit svg { width: 40px; height: 40px; fill: currentColor; }
+    .dots { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+    .dots i { display: block; height: 3px; width: 6px; background: rgba(255,255,255,.28); border-radius: 1px; }
+    .dots i.on { width: 14px; background: var(--amber); }
+    .dark-ui .chip, .dark-ui .hit { color: #1a140c; border-color: rgba(40,30,20,.35); background: rgba(255,255,255,.45); }
+    .dark-ui .hit.stop { color: #fff; background: rgba(40,30,20,.45); border-color: rgba(40,30,20,.4); }
+    .dark-ui .dots i { background: rgba(40,30,20,.25); }
+    .dark-ui .dots i.on { background: #b84a1a; }
+
+    /* 设置页 */
+    .set-head { position: absolute; left: 12px; top: 10px; }
+    .set-head .k { font-size: 10px; letter-spacing: .28em; color: var(--dim); }
+    .set-head .t { font-size: 20px; font-weight: 600; }
+    .row {
+      position: absolute; left: 10px; right: 10px; height: 36px; border-radius: 10px;
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 10px;
+      font-size: 12px; font-family: var(--cn);
+    }
+    .row b { font-family: var(--display); font-weight: 600; letter-spacing: .04em; }
+    .row .v { color: var(--amber); font-size: 11px; letter-spacing: .08em; }
+    .thumbs { position: absolute; left: 10px; right: 10px; top: 48px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+    .th { height: 48px; border-radius: 8px; border: 2px solid transparent; overflow: hidden; }
+    .th.on { border-color: var(--amber); }
+    .host {
+      margin-top: 18px; padding: 16px; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04);
+      font-family: var(--cn); font-size: 13px; line-height: 1.65; color: var(--mute); max-width: 720px;
+    }
+    .host b { color: var(--ink); }
+    .host ul { margin: 8px 0 0 1.1em; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="kicker">Desk154 · companion</p>
+    <h1>壁纸气质 + 傻瓜设置</h1>
+    <p class="lede">先看图。壁纸是固件里预置的几张静态图（各约 115KB），设置页在设备上改，电脑托盘负责「配对 / 配网 / 抄 IP」这类现在必须开终端的事。</p>
+    <div class="banner">请在浏览器打开 <b>http://127.0.0.1:8765/desk154-settings-preview.html</b></div>
+
+    <h2>1 · 壁纸候选（当前 Wave 保留）</h2>
+    <div class="wall">
+      <div class="slot">
+        <div class="label"><b>A · Wave</b>现款 · 产品海报流体</div>
+        <div class="screen wp-wave"><div class="veil" style="background:rgba(6,8,14,.22)"></div>
+          <div class="ui"><div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="acts"><div class="hit"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div></div>
+            <div class="dots"><i class="on"></i><i></i></div></div></div>
+      </div>
+      <div class="slot">
+        <div class="label"><b>B · Ember</b>炭火 · 暖橙黑</div>
+        <div class="screen wp-ember"><div class="veil" style="background:rgba(12,4,2,.28)"></div>
+          <div class="ui"><div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="acts"><div class="hit"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div></div>
+            <div class="dots"><i class="on"></i><i></i></div></div></div>
+      </div>
+      <div class="slot">
+        <div class="label"><b>C · 宣纸</b>浅底墨 · 完全反差</div>
+        <div class="screen wp-ink dark-ui"><div class="veil" style="background:rgba(40,28,12,.12)"></div>
+          <div class="ui"><div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="acts"><div class="hit"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div></div>
+            <div class="dots"><i class="on"></i><i></i></div></div></div>
+      </div>
+      <div class="slot">
+        <div class="label"><b>D · 磷光</b>终端网格 · 绿</div>
+        <div class="screen wp-phosphor"><div class="veil" style="background:rgba(0,8,4,.35)"></div>
+          <div class="ui"><div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="acts"><div class="hit"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div></div>
+            <div class="dots"><i class="on"></i><i></i></div></div></div>
+      </div>
+      <div class="slot">
+        <div class="label"><b>E · 夜空</b>靛蓝星点</div>
+        <div class="screen wp-night"><div class="veil" style="background:rgba(4,8,20,.32)"></div>
+          <div class="ui"><div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="acts"><div class="hit"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div></div>
+            <div class="dots"><i class="on"></i><i></i></div></div></div>
+      </div>
+      <div class="slot">
+        <div class="label"><b>F · 石面</b>冷灰混凝土</div>
+        <div class="screen wp-stone"><div class="veil" style="background:rgba(8,10,14,.4)"></div>
+          <div class="ui"><div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="acts"><div class="hit"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div></div>
+            <div class="dots"><i class="on"></i><i></i></div></div></div>
+      </div>
+    </div>
+
+    <h2>2 · 设置页示意（设备上能改的）</h2>
+    <div class="wall">
+      <div class="slot">
+        <div class="label"><b>SET · 壁纸</b>四格点选 · 即时换</div>
+        <div class="screen wp-wave"><div class="veil" style="background:rgba(6,8,14,.55)"></div>
+          <div class="ui">
+            <div class="set-head"><div class="k">LOOK</div><div class="t">WALL</div></div>
+            <div class="thumbs">
+              <div class="th wp-wave on"></div>
+              <div class="th wp-ember"></div>
+              <div class="th wp-ink"></div>
+              <div class="th wp-phosphor"></div>
+            </div>
+            <div class="row" style="top:108px"><span>音量</span><span class="v">60%</span></div>
+            <div class="row" style="top:150px"><span>电脑</span><span class="v">USB</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="slot">
+        <div class="label"><b>SET · 第二页</b>警告 / 休眠 / 复位</div>
+        <div class="screen wp-wave"><div class="veil" style="background:rgba(6,8,14,.55)"></div>
+          <div class="ui">
+            <div class="set-head"><div class="k">GEAR</div><div class="t">MORE</div></div>
+            <div class="row" style="top:52px"><span>额度警告</span><span class="v">70 / 90</span></div>
+            <div class="row" style="top:96px"><span>息屏</span><span class="v">3 分</span></div>
+            <div class="row" style="top:140px"><span>晃动</span><span class="v">撤销</span></div>
+            <div class="row" style="top:184px"><span>TOKEN 计数</span><span class="v">长按清零</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="host">
+      <b>电脑托盘该包办的（不该让你开终端）：</b>
+      <ul>
+        <li>开机自启 + 托盘常驻；插上设备自动认 MAC，不用选 COM 口。</li>
+        <li>第一次：点「配对」→ 自动把本机局域网 IP 写进设备，不再手抄 <code>host_url</code>。</li>
+        <li>Wi-Fi：托盘里选家里的网、填一次密码，USB 推给设备（屏上不打字）。</li>
+        <li>额度：托盘自己读 Cursor / Claude 登录态；缺 cookie 时弹一次「去登录」，不要改配置文件。</li>
+        <li>刷机仍走电脑侧「更新固件」按钮，禁止误刷另一块板。</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

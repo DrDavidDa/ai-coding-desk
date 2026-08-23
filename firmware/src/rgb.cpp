@@ -24,7 +24,7 @@ void rgb_init() {
 }
 
 void rgb_loop() {
-    if (gStatus.prone) {
+    if (gStatus.prone || gStatus.screen_off) {
         fill_solid(sLeds, WS2812_COUNT, CRGB::Black);
         FastLED.show();
         return;

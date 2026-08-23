@@ -17,6 +17,9 @@
 #define QMI_AX_L 0x35
 #define QMI_WHOAMI_VAL 0x05
 
+#define ORACLE_SHAKES 3
+#define ORACLE_SHAKE_WIN_MS 3500
+
 static uint8_t sAddr = 0;
 static bool sOk = false;
 static int16_t sPx = 0, sPy = 0, sPz = 0;
@@ -28,6 +31,8 @@ static int sFaceSign = 1;
 static uint32_t sProneMs = 0;
 static uint32_t sFaceUpMs = 0;
 static uint32_t sKnockAt = 0;
+static uint8_t sOracleShakes = 0;
+static uint32_t sOracleShakeAt = 0;
 
 static void qmi_write(uint8_t reg, uint8_t val) {
     Wire.beginTransmission(sAddr);
@@ -86,21 +91,29 @@ static int16_t axis_at(int ax, int16_t x, int16_t y, int16_t z) {
 }
 
 static void learn_face(int16_t x, int16_t y, int16_t z) {
-    if (sFaceAx >= 0) return;
     int16_t v[3] = {x, y, z};
+    int32_t ax[3] = {abs((int32_t)x), abs((int32_t)y), abs((int32_t)z)};
     int best = 0;
-    int32_t a = abs((int32_t)v[0]);
-    for (int i = 1; i < 3; i++) {
-        int32_t b = abs((int32_t)v[i]);
-        if (b > a) {
-            a = b;
-            best = i;
-        }
-    }
-    if (a < 12000) return;
+    if (ax[1] > ax[best]) best = 1;
+    if (ax[2] > ax[best]) best = 2;
+    if (ax[best] < 14000) return;
+    int32_t others = ax[0] + ax[1] + ax[2] - ax[best];
+    if (others > 8000) return; /* still tilted — don't lock a wrong axis */
+    int sign = v[best] >= 0 ? 1 : -1;
+    if (sFaceAx == best && sFaceSign == sign) return;
     sFaceAx = best;
-    sFaceSign = v[best] >= 0 ? 1 : -1;
+    sFaceSign = sign;
     Serial.printf("[IMU] face axis=%d sign=%d g=%d\n", sFaceAx, sFaceSign, (int)v[best]);
+}
+
+void imu_clear_prone() {
+    sProneMs = 0;
+    sFaceUpMs = 0;
+    if (!gStatus.prone) return;
+    gStatus.prone = false;
+    gStatus.screen_off = false;
+    display_apply_presence();
+    Serial.println("[IMU] prone cleared");
 }
 
 static void update_prone(int16_t x, int16_t y, int16_t z, uint32_t now) {
@@ -111,7 +124,7 @@ static void update_prone(int16_t x, int16_t y, int16_t z, uint32_t now) {
     last = now;
     if (dt > 80) dt = 80;
 
-    if (face < -9000) {
+    if (face < -12000) {
         sProneMs += dt;
         sFaceUpMs = 0;
     } else if (face > 8000) {
@@ -122,7 +135,7 @@ static void update_prone(int16_t x, int16_t y, int16_t z, uint32_t now) {
         sFaceUpMs = 0;
     }
 
-    if (!gStatus.prone && sProneMs >= 280) {
+    if (!gStatus.prone && sProneMs >= 1500) {
         gStatus.prone = true;
         gStatus.screen_off = false;
         sProneMs = 0;
@@ -130,7 +143,7 @@ static void update_prone(int16_t x, int16_t y, int16_t z, uint32_t now) {
         display_apply_presence();
         ui_toast("MUTE");
         Serial.println("[IMU] prone mute");
-    } else if (gStatus.prone && sFaceUpMs >= 280) {
+    } else if (gStatus.prone && sFaceUpMs >= 400) {
         gStatus.prone = false;
         gStatus.screen_off = false;
         sFaceUpMs = 0;
@@ -141,29 +154,41 @@ static void update_prone(int16_t x, int16_t y, int16_t z, uint32_t now) {
 }
 
 static void on_shake() {
-    if (ui_is_idle()) return;
-    if (ui_is_pack()) {
-        if (gStatus.prone || gStatus.screen_off) return;
-        ui_pack_press();
-        return;
-    }
+    uint32_t now = millis();
+    if (gStatus.screen_off) return;
+    /* Oracle only on the quota page — pocket shakes on DESK/idle must not
+       beep or draw lots. Overlay redraw is allowed while a lot is showing. */
+    if (!ui_is_usage() && !ui_oracle_visible()) return;
+    if (gStatus.prone) imu_clear_prone();
+    if (ui_is_idle()) ui_force_wake();
     if (voice_is_recording()) {
         voice_cancel();
         ui_toast("CANCEL");
         Serial.println("[IMU] cancel rec");
         return;
     }
-    if (!strcmp(gStatus.agent_state, "working") || !strcmp(gStatus.agent_state, "waiting")) {
-        Serial.println("#STOP");
-        strncpy(gStatus.agent_state, "idle", sizeof(gStatus.agent_state) - 1);
-        ui_toast("STOP");
-        beep_request(BEEP_STOP);
-        Serial.println("[IMU] stop");
+    if (ui_is_pack()) return;
+    /* 3 shakes always draw a lot. #STOP used to run on the first shake after
+       发送 left agent_state=working, so oracle never opened. */
+    if (ui_oracle_visible()) {
+        ui_pack_oracle();
         return;
     }
-    if (gStatus.prone) return;
-    Serial.println("#UNDO");
-    ui_toast("UNDO");
+    if (now - sOracleShakeAt > ORACLE_SHAKE_WIN_MS) {
+        if (sOracleShakes == 1) {
+            Serial.println("#UNDO");
+            ui_toast("UNDO");
+        }
+        sOracleShakes = 0;
+    }
+    sOracleShakeAt = now;
+    sOracleShakes++;
+    Serial.printf("[IMU] shake %u/%u\n", (unsigned)sOracleShakes, (unsigned)ORACLE_SHAKES);
+    if (sOracleShakes >= ORACLE_SHAKES) {
+        sOracleShakes = 0;
+        ui_pack_oracle();
+        Serial.println("[IMU] oracle");
+    }
 }
 
 static void on_knock() {
@@ -177,9 +202,18 @@ void imu_loop() {
     if (now - last < 25) return;
     last = now;
     int16_t x, y, z;
-    if (!qmi_read_accel(&x, &y, &z)) return;
+    static uint8_t sImuFail = 0;
+    if (!qmi_read_accel(&x, &y, &z)) {
+        if (++sImuFail >= 20) {
+            sImuFail = 0;
+            Wire.end();
+            display_wire_begin();
+            Serial.println("[IMU] wire reset");
+        }
+        return;
+    }
+    sImuFail = 0;
     learn_face(x, y, z);
-    update_prone(x, y, z, now);
 
     if (!sHavePrev) {
         sPx = x;
@@ -194,7 +228,7 @@ void imu_loop() {
     sPx = x;
     sPy = y;
     sPz = z;
-    if (ui_is_idle()) return;
+    if (abs(dx) + abs(dy) + abs(dz) < 4000) update_prone(x, y, z, now);
     if (now < sLockUntil) return;
 
     int32_t dmax = dx;
@@ -204,8 +238,8 @@ void imu_loop() {
     static int sCross = 0;
     static int32_t sLastD = 0;
     static uint32_t sWin = 0;
-    const int32_t kShake = 7000;
-    const int32_t kKnock = 5200;
+    const int32_t kShake = 4500;
+    const int32_t kKnock = 4000;
 
     if (now - sWin > 800) {
         sKnockAt = 0;
@@ -241,6 +275,6 @@ void imu_loop() {
     if (sCross < 2) return;
     sCross = 0;
     sKnockAt = 0;
-    sLockUntil = now + 1200;
+    sLockUntil = now + 700;
     on_shake();
 }

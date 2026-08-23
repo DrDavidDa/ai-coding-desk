@@ -61,11 +61,16 @@
     .stripe.copper { background: var(--copper); }
     .stripe.hot { background: var(--hot); }
     .dots {
-      position: absolute; left: 0; right: 0; bottom: 8px;
-      display: flex; justify-content: center; gap: 11px; pointer-events: none;
+      position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
+      display: flex; justify-content: center; align-items: center; gap: 10px;
+      background: rgba(6,8,14,.4); border-top: 1px solid rgba(255,255,255,.12);
     }
-    .dots i { display: block; height: 4px; background: var(--well); width: 5px; }
-    .dots i.on { width: 12px; background: var(--copper); }
+    .dots i { display: block; height: 4px; background: var(--well); width: 6px; border-radius: 2px; }
+    .dots i.on { width: 14px; background: var(--copper); }
+    .dots .arr {
+      width: 80px; height: 64px; display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: var(--gold); cursor: pointer;
+    }
     .desk-bar {
       position: absolute; left: 0; top: 0; width: 240px; height: 4px;
       background: transparent; pointer-events: none;
@@ -90,7 +95,7 @@
     .key-chip:nth-child(3) { left: 170px; }
     .key-chip:active { filter: brightness(1.12); }
     .rec-timer {
-      position: absolute; left: 20px; right: 20px; top: 58px;
+      position: absolute; left: 20px; right: 20px; top: 46px;
       text-align: center; font-size: 28px; line-height: 1;
       letter-spacing: -.02em; color: var(--ink);
       font-variant-numeric: tabular-nums;
@@ -98,7 +103,7 @@
     }
     #page-desk.recording .rec-timer { display: block; }
     .acts {
-      position: absolute; left: 0; top: 108px; width: 240px; height: 116px;
+      position: absolute; left: 0; top: 72px; width: 240px; height: 104px;
       z-index: 2;
     }
     .hit {
@@ -107,15 +112,15 @@
     }
     .hit:active { filter: brightness(1.12); }
     .talk-halo {
-      position: absolute; left: 18px; top: 0; width: 116px; height: 116px;
-      border-radius: 58px; background: var(--orange); opacity: .3;
+      position: absolute; left: 8px; top: 0; width: 104px; height: 104px;
+      border-radius: 52px; background: var(--orange); opacity: .3;
       pointer-events: none; display: none;
     }
     #page-desk.recording .talk-halo { display: block; }
     #page-desk.recording.pulse .talk-halo { opacity: .5; }
     .talk {
-      position: absolute; left: 26px; top: 8px;
-      width: 100px; height: 100px; border-radius: 50px;
+      position: absolute; left: 16px; top: 8px;
+      width: 88px; height: 88px; border-radius: 44px;
       background: var(--orange); color: var(--white);
     }
     #page-desk.recording .talk { background: #241c16; }
@@ -123,8 +128,8 @@
     #page-desk.recording .talk svg { color: var(--white); }
     #page-desk.recording.pulse .talk svg { color: var(--talk); }
     .stop {
-      position: absolute; left: 134px; top: 8px;
-      width: 100px; height: 100px; border-radius: 50px;
+      position: absolute; left: 136px; top: 8px;
+      width: 88px; height: 88px; border-radius: 44px;
       background: var(--well); color: var(--mute);
     }
     #page-desk.running .stop,
@@ -157,34 +162,31 @@
       position: absolute; left: 1px; top: 1px; bottom: 1px;
       background: currentColor;
     }
-    .usage-head { position: absolute; left: 18px; top: 12px; }
+    .usage-head { position: absolute; left: 14px; top: 6px; }
     .usage-head .k { font-size: 12px; color: var(--mute); letter-spacing: .16em; }
     .usage-head .t { font-size: 20px; color: var(--ink); margin-top: 2px; }
     .sync {
-      position: absolute; right: 10px; top: 18px; width: 56px; height: 28px;
+      position: absolute; right: 6px; top: 6px; width: 40px; height: 40px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 12px; color: var(--mute); cursor: pointer;
+      font-size: 14px; color: var(--gold); cursor: pointer;
     }
     .pager {
-      position: absolute; left: 0; right: 0; bottom: 0; height: 32px;
+      position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
       display: none; align-items: center; justify-content: center; gap: 8px;
       z-index: 4; cursor: pointer;
+      background: rgba(6,8,14,.4); border-top: 1px solid rgba(255,255,255,.12);
     }
     .pager .arr {
-      width: 36px; height: 32px;
+      width: 80px; height: 64px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 22px; color: var(--gold); line-height: 1;
+      font-size: 28px; color: var(--gold); line-height: 1;
     }
-    .pager .dot {
-      display: block; width: 6px; height: 6px; background: var(--well);
-    }
-    .pager .dot.on { width: 14px; background: var(--gold); }
     .pager .num {
       min-width: 44px; text-align: center;
-      font-size: 11px; color: var(--mute); letter-spacing: .08em;
+      font-size: 14px; color: var(--mute); letter-spacing: .08em;
     }
     .grid {
-      position: absolute; left: 8px; top: 54px; width: 224px; height: 150px;
+      position: absolute; left: 8px; top: 44px; width: 224px; height: 128px;
       overflow: visible;
     }
     .grid.n1, .grid.n2 {
@@ -429,7 +431,7 @@
   <div class="kicker">Desk154 · 240×240 · live</div>
   <h1>额度就是 logo 本身</h1>
   <p class="lede">
-    与真机固件同步：顶栏 <b>发送 / 取消 / 讲话</b>；TALK 两大圆 <b>麦克风 / 禁止</b>，录音显示秒数并脉冲。
+    与真机固件同步：顶栏 <b>发送 / 取消 / 讲话</b>；TALK 两大圆 <b>麦克风 / 方块结束</b>（结束=发送，取消只用顶栏），录音显示秒数并脉冲。
     USAGE 有订阅才上场，一屏最多 4 个；原色是剩余额度，从顶上扣成灰。
     PLAN 默认 <b>5H / 7D / 1M</b>；Cursor 据实 <b>AUTO / API</b>；Claude Code 接 DeepSeek 时仍为 Claude Code 页 + <b>YUAN</b>。
     左滑 DESK→USAGE→PACK；点 logo 进 PLAN；待机 3 分钟。
@@ -457,11 +459,11 @@
             <div class="hit talk" id="talk" title="讲话">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93V21h2v-3.07A7 7 0 0 0 19 11h-2z"/></svg>
             </div>
-            <div class="hit stop" id="stop" title="取消">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31A7.902 7.902 0 0 1 12 20zm6.31-3.1L7.1 5.69A7.902 7.902 0 0 1 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/></svg>
+            <div class="hit stop" id="stop" title="结束录音">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
             </div>
           </div>
-          <div class="dots"><i class="on"></i><i></i></div>
+          <div class="dots"><span class="arr" data-dir="-1">‹</span><i class="on"></i><i></i><span class="arr" data-dir="1">›</span></div>
         </div>
 
         <div class="page" id="page-usage">
@@ -1157,7 +1159,7 @@
     $("talk").onclick = () => { if (S.lastAbs > 28) return; startTalk(); };
     $("stop").onclick = () => {
       if (S.lastAbs > 28) return;
-      if (S.rec) endTalk(false);
+      if (S.rec) endTalk(true); /* square STOP = end & send */
       else stopAgent();
     };
     $("keyBoot").onclick = () => { if (!S.rec) toast("ENTER"); };

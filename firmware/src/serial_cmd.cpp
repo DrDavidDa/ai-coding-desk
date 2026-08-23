@@ -6,6 +6,8 @@
 #include "hid_keys.h"
 #include "beep.h"
 #include "imu.h"
+#include "display.h"
+#include "ui.h"
 #include <cstring>
 #include <cstdlib>
 #include <ctime>
@@ -58,6 +60,20 @@ static void handle(char *line) {
         ack("config saved");
         return;
     }
+    if (!strcmp(line, "#WAKE")) {
+        display_apply_presence();
+        ui_force_wake();
+        ack("wake");
+        return;
+    }
+    if (!strncmp(line, "#TEXT|", 6)) {
+        strncpy(gStatus.last_text, line + 6, sizeof(gStatus.last_text) - 1);
+        gStatus.last_text[sizeof(gStatus.last_text) - 1] = 0;
+        strncpy(gStatus.agent_state, "done", sizeof(gStatus.agent_state) - 1);
+        ui_refresh_from_status();
+        ack("text");
+        return;
+    }
     if (!strcmp(line, "#BEEP")) {
         beep_request(BEEP_OK);
         ack("beep");
@@ -100,6 +116,7 @@ static void handle(char *line) {
     }
     if (!strncmp(line, "#QJ|", 4)) {
         if (parse_status_json(line + 4)) {
+            ui_refresh_from_status();
             Serial.printf("[QJ] glm=%d cursor=%d kimi=%d host_ok=1\n",
                           gStatus.glm.h5, gStatus.cursor.auto_pct, gStatus.kimi.h5);
         } else {
@@ -133,8 +150,10 @@ void serial_send_wav(const uint8_t *data, size_t n) {
 
 void serial_init() {
     Serial.setRxBufferSize(SERIAL_LINE_MAX);
-    Serial.begin(115200);
-    delay(800);
+    if (!Serial) {
+        Serial.begin(115200);
+        delay(200);
+    }
     Serial.println("Desk154 ready");
 }
 

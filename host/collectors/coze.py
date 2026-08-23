@@ -8,7 +8,10 @@ from typing import Any
 from collectors.util import http_request, unix_ts
 
 BENEFIT_URL = "https://api.coze.cn/v1/commerce/benefit/benefits/get"
-SECRET = Path(__file__).resolve().parent.parent / "secrets" / "coze_token.txt"
+from paths import secrets_dir
+
+SECRET = secrets_dir() / "coze_token.txt"
+SECRET_FALLBACK = Path(__file__).resolve().parent.parent / "secrets" / "coze_token.txt"
 
 
 def _fail(prev: dict[str, Any] | None, err: str) -> dict[str, Any]:
@@ -98,10 +101,11 @@ def _token_candidates() -> list[str]:
         t = (data.get("accessToken") or data.get("token") or "").strip()
         if t and t not in out:
             out.append(t)
-    if SECRET.is_file():
-        t = SECRET.read_text(encoding="utf-8").strip()
-        if t and t not in out:
-            out.append(t)
+    for sec in (SECRET, SECRET_FALLBACK):
+        if sec.is_file():
+            t = sec.read_text(encoding="utf-8").strip()
+            if t and t not in out:
+                out.append(t)
     return out
 
 

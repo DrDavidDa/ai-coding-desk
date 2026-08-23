@@ -44,6 +44,7 @@ _last_stop_at = 0.0
 _last_stop_kind = ""
 _last_inject = ""
 _session_run = False
+_last_coding_hwnd = None
 
 TARGET_TITLES = {
     "cursor": ("cursor",),
@@ -143,6 +144,8 @@ user32.EnumWindows.argtypes = (WNDENUMPROC, wintypes.LPARAM)
 user32.EnumWindows.restype = wintypes.BOOL
 user32.IsWindowVisible.argtypes = (wintypes.HWND,)
 user32.IsWindowVisible.restype = wintypes.BOOL
+user32.IsWindow.argtypes = (wintypes.HWND,)
+user32.IsWindow.restype = wintypes.BOOL
 user32.GetWindowThreadProcessId.argtypes = (wintypes.HWND, ctypes.POINTER(wintypes.DWORD))
 user32.GetWindowThreadProcessId.restype = wintypes.DWORD
 user32.AttachThreadInput.argtypes = (wintypes.DWORD, wintypes.DWORD, wintypes.BOOL)
@@ -266,6 +269,28 @@ def _process_basename(hwnd) -> str:
         kernel32.CloseHandle(handle)
 
 
+def _hwnd_title(hwnd) -> str:
+    if not hwnd:
+        return ""
+    buf = ctypes.create_unicode_buffer(512)
+    user32.GetWindowTextW(hwnd, buf, 512)
+    return buf.value or ""
+
+
+def _is_coding_hwnd(hwnd) -> bool:
+    if not hwnd or not user32.IsWindow(hwnd):
+        return False
+    kind = classify_focus(_hwnd_title(hwnd), _process_basename(hwnd))
+    return kind in ("cursor", "cli")
+
+
+def remember_coding_hwnd(hwnd=None) -> None:
+    global _last_coding_hwnd
+    hwnd = hwnd or user32.GetForegroundWindow()
+    if _is_coding_hwnd(hwnd):
+        _last_coding_hwnd = hwnd
+
+
 def _pick_hwnd(target: str):
     best = None
     best_score = 0
@@ -282,12 +307,35 @@ def _pick_hwnd(target: str):
     return best if best_score > 0 else None
 
 
-def focus_target(target: str) -> bool:
-    hwnd = _pick_hwnd(target)
-    if not hwnd:
+def _pick_coding_hwnd():
+    """Current / last coding window. Prefer last used, then Cursor, then any CLI."""
+    global _last_coding_hwnd
+    if _is_coding_hwnd(_last_coding_hwnd):
+        return _last_coding_hwnd
+    fg = user32.GetForegroundWindow()
+    best = None
+    best_score = 0
+    for hwnd, name in _enum_windows():
+        kind = classify_focus(name, _process_basename(hwnd))
+        if kind not in ("cursor", "cli"):
+            continue
+        score = 80 if kind == "cursor" else 50
+        if hwnd == fg:
+            score += 5
+        if score > best_score:
+            best_score = score
+            best = hwnd
+    if best:
+        _last_coding_hwnd = best
+    return best
+
+
+def focus_hwnd(hwnd) -> bool:
+    if not hwnd or not user32.IsWindow(hwnd):
         return False
     user32.ShowWindow(hwnd, SW_RESTORE)
     if user32.GetForegroundWindow() == hwnd:
+        remember_coding_hwnd(hwnd)
         return True
     fg = user32.GetForegroundWindow()
     pid = wintypes.DWORD(0)
@@ -308,7 +356,24 @@ def focus_target(target: str) -> bool:
     if fg_tid:
         user32.AttachThreadInput(cur, fg_tid, False)
     time.sleep(0.08)
-    return user32.GetForegroundWindow() == hwnd
+    ok = user32.GetForegroundWindow() == hwnd
+    if ok:
+        remember_coding_hwnd(hwnd)
+    return ok
+
+
+def focus_target(target: str) -> bool:
+    hwnd = _pick_hwnd(target)
+    if not hwnd:
+        return False
+    return focus_hwnd(hwnd)
+
+
+def focus_coding_window() -> bool:
+    hwnd = _pick_coding_hwnd()
+    if not hwnd:
+        return False
+    return focus_hwnd(hwnd)
 
 
 def _host_log(*parts) -> None:
@@ -581,17 +646,20 @@ def _send_vk(vk: int, extra_flags: int = 0) -> int:
 
 
 def type_into_focus(text: str, press_enter: bool = False) -> int:
-    sent = 0
-    for ch in text:
-        if ch == "\n":
+    def fire() -> int:
+        sent = 0
+        for ch in text:
+            if ch == "\n":
+                sent += _send_vk(VK_RETURN)
+            else:
+                sent += _send_unicode_char(ord(ch))
+            time.sleep(0.003)
+        if press_enter:
+            time.sleep(0.05)
             sent += _send_vk(VK_RETURN)
-        else:
-            sent += _send_unicode_char(ord(ch))
-        time.sleep(0.003)
-    if press_enter:
-        time.sleep(0.05)
-        sent += _send_vk(VK_RETURN)
-    return sent
+        return sent
+
+    return int(_attach_foreground(fire) or 0)
 
 
 def _clipboard_get() -> str:
@@ -656,16 +724,22 @@ def _paste_via_clipboard(text: str) -> bool:
 
 def inject_transcript(
     text: str,
-    target: str = "cursor",
+    target: str = "auto",
     press_enter: bool = False,
     steal_focus: bool = False,
 ) -> dict:
+    _ = (target, steal_focus)  # named target retired; follow the focused coding window
     cleaned = clean_transcript(text)
     if not cleaned:
         return {"ok": False, "err": "empty", "text": "", "method": ""}
+    kind, _fg0, _exe0 = focused_info()
+    fg_hwnd = user32.GetForegroundWindow()
     focused = True
-    if steal_focus:
-        focused = focus_target(target)
+    if kind in ("cursor", "cli"):
+        remember_coding_hwnd(fg_hwnd)
+    else:
+        # Not in a coding app: restore the last one you used (or any coding window).
+        focused = focus_coding_window()
         time.sleep(0.08)
     fg = foreground_title()
     sent = type_into_focus(cleaned, press_enter=press_enter)
@@ -675,14 +749,28 @@ def inject_transcript(
         _paste_via_clipboard(cleaned)
         if press_enter:
             time.sleep(0.05)
-            _send_vk(VK_RETURN)
+            _attach_foreground(lambda: _send_vk(VK_RETURN))
     global _last_inject
     _last_inject = cleaned
+    _host_log(
+        "[host] inject",
+        method,
+        "sent",
+        sent,
+        "kind",
+        classify_focus(fg),
+        "fg",
+        fg,
+        "text",
+        cleaned[:80],
+    )
     return {
         "ok": True,
         "text": cleaned,
         "focused": focused,
         "fg": fg,
+        "kind": classify_focus(fg),
+        "target": "auto",
         "method": method,
         "sent": sent,
     }
@@ -692,4 +780,4 @@ if __name__ == "__main__":
     import sys
 
     msg = " ".join(sys.argv[1:]) or "desk inject ok"
-    print(inject_transcript(msg, target="cursor"))
+    print(inject_transcript(msg))

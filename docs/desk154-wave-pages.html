@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Desk154 · Wave 审核墙</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Sans+JP:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #f7f4ef;
+      --mute: rgba(247,244,239,.74);
+      --dim: rgba(247,244,239,.46);
+      --amber: #ffb020;
+      --hot: #ff6a4a;
+      --glass: rgba(255,255,255,.14);
+      --glass-b: rgba(255,255,255,.4);
+      --desk: #07080c;
+      --display: "Outfit", Bahnschrift, "Segoe UI Variable Display", sans-serif;
+      --cn: "IBM Plex Sans JP", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --wave: #000 center/cover no-repeat url("assets/wave-bg-240.png");
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse 55% 40% at 85% 0%, rgba(26,144,255,.2), transparent 55%), var(--desk);
+      color: var(--ink);
+      font-family: var(--display);
+      padding: 28px 20px 80px;
+    }
+    .wrap { max-width: 1320px; margin: 0 auto; }
+    .kicker { font-size: 11px; letter-spacing: .26em; text-transform: uppercase; color: var(--dim); }
+    h1 { margin-top: 8px; font-weight: 500; font-size: clamp(22px, 3.2vw, 34px); letter-spacing: -.03em; }
+    .lede { margin-top: 10px; max-width: 62em; color: var(--mute); font-size: 14px; line-height: 1.65; font-family: var(--cn); }
+    .lede b { color: var(--ink); font-weight: 600; }
+    .banner {
+      margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid rgba(255,176,32,.28); background: rgba(255,176,32,.08);
+      font-size: 13px; color: var(--mute); font-family: var(--cn); line-height: 1.55;
+    }
+    .banner b { color: var(--amber); }
+    .fix {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid rgba(126,208,255,.25); background: rgba(126,208,255,.06);
+      font-size: 13px; color: var(--mute); font-family: var(--cn); line-height: 1.6;
+    }
+    .fix b { color: #9ad8ff; }
+    .locked {
+      margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid rgba(116,255,122,.3); background: rgba(116,255,122,.07);
+      font-size: 13px; color: var(--mute); font-family: var(--cn); line-height: 1.6;
+    }
+    .locked b { color: #74ff7a; }
+
+    h2 { margin-top: 36px; margin-bottom: 14px; font-size: 16px; font-weight: 600; letter-spacing: .04em; }
+    .wall {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 22px 18px;
+    }
+    .slot { width: 100%; max-width: 280px; }
+    .slot .label {
+      margin-bottom: 8px; font-size: 12px; letter-spacing: .06em; color: var(--mute); font-family: var(--cn);
+    }
+    .slot .label b {
+      display: block; color: var(--ink); font-size: 14px; letter-spacing: 0;
+      font-family: var(--display); font-weight: 600; margin-bottom: 2px;
+    }
+    .slot .tag {
+      display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px;
+      font-size: 10px; letter-spacing: .08em; background: rgba(255,255,255,.06); color: var(--dim);
+    }
+    .slot .tag.rec { color: var(--hot); background: rgba(255,106,74,.12); }
+    .slot .tag.pick { color: var(--amber); background: rgba(255,176,32,.12); }
+
+    .screen {
+      width: 240px; height: 240px; border-radius: 8px; overflow: hidden; position: relative;
+      background: var(--wave);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 18px 36px rgba(0,0,0,.4);
+    }
+    .veil { position: absolute; inset: 0; background: rgba(6,8,14, var(--veil, .22)); pointer-events: none; }
+    .ui { position: absolute; inset: 0; z-index: 1; }
+    .rec-chrome {
+      position: absolute; left: 0; right: 0; top: 0; height: 2px; z-index: 5;
+      background: var(--hot); box-shadow: 0 0 10px rgba(255,106,74,.55);
+    }
+
+    .keys { position: absolute; left: 8px; right: 8px; top: 8px; display: flex; gap: 6px; }
+    .chip {
+      flex: 1; height: 34px; border-radius: 10px; background: var(--glass); border: 1px solid var(--glass-b);
+      color: #fff; font: 600 13px/34px var(--cn); text-align: center; letter-spacing: .08em; backdrop-filter: blur(8px);
+    }
+    .chip.hot { background: rgba(255,176,32,.42); border-color: rgba(255,220,120,.65); }
+    .timer {
+      position: absolute; left: 0; right: 0; top: 50px; text-align: center;
+      font: 600 32px/1 var(--display); color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.55);
+      font-variant-numeric: tabular-nums;
+    }
+    .acts {
+      position: absolute; left: 0; top: 72px; width: 240px; height: 104px;
+      display: flex; justify-content: center; align-items: center; gap: 18px;
+    }
+    .halo {
+      position: absolute; width: 122px; height: 122px; border-radius: 61px;
+      left: calc(50% - 61px - 50px); top: 50%; transform: translateY(-50%);
+      background: radial-gradient(circle, rgba(126,210,255,.55), transparent 70%);
+      animation: pulseHalo 1s ease-in-out infinite;
+    }
+    @keyframes pulseHalo {
+      0%, 100% { opacity: .28; transform: translateY(-50%) scale(1); }
+      50% { opacity: .5; transform: translateY(-50%) scale(1.05); }
+    }
+    .hit {
+      position: relative; width: 88px; height: 88px; border-radius: 44px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .talk { background: rgba(255,255,255,.2); border: 2px solid rgba(255,255,255,.7); color: #fff; }
+    .talk.rec { background: rgba(8,12,22,.35); border-color: rgba(170,220,255,.9); color: #c8ecff; }
+    .stop { background: rgba(0,0,0,.38); border: 2px solid rgba(255,255,255,.45); color: #fff; }
+    .stop.rec { background: rgba(255,90,60,.55); border-color: rgba(255,200,180,.75); }
+    .talk svg, .stop svg { width: 44px; height: 44px; fill: currentColor; }
+    .mid-dots { display: flex; align-items: center; gap: 8px; pointer-events: none; }
+    .mid-dots i { display: block; height: 4px; width: 6px; background: rgba(255,255,255,.28); border-radius: 2px; }
+    .mid-dots i.on { width: 14px; background: var(--amber); }
+
+    .usage-head { position: absolute; left: 14px; top: 6px; }
+    .usage-head .k { font-size: 10px; letter-spacing: .28em; color: var(--dim); font-weight: 500; }
+    .usage-head .t { font-size: 20px; letter-spacing: .04em; margin-top: 1px; font-weight: 600; text-shadow: 0 1px 10px rgba(0,0,0,.45); }
+    .sync {
+      position: absolute; right: 6px; top: 6px; width: 40px; height: 40px; border-radius: 10px;
+      border: 1px solid rgba(255,176,32,.45); background: rgba(255,176,32,.12);
+      color: var(--amber); font-size: 16px; line-height: 40px; text-align: center;
+    }
+    .grid {
+      position: absolute; left: 10px; top: 44px; width: 220px; height: 128px;
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px;
+    }
+    .cell { display: flex; flex-direction: column; align-items: center; }
+    .cd { margin-top: 4px; font-size: 9px; letter-spacing: .1em; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .cd.warn { color: var(--amber); } .cd.hot { color: var(--hot); }
+    .pager {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 64px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-size: 14px; color: var(--dim); letter-spacing: .12em; font-weight: 500;
+      background: rgba(6,8,14,.4); border-top: 1px solid rgba(255,255,255,.12);
+    }
+    .pager .arr { color: var(--amber); font-size: 28px; width: 80px; height: 64px; display: flex; align-items: center; justify-content: center; }
+
+    /* USAGE A liquid — locked; brand name = logo text, enlarged */
+    .tile {
+      width: 100%; height: 40px; border-radius: 14px; position: relative; overflow: hidden;
+      background: rgba(8,12,20,.35); border: 1px solid rgba(255,255,255,.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.12); backdrop-filter: blur(8px);
+    }
+    .tile.low { border-color: rgba(255,106,74,.55); box-shadow: 0 0 12px rgba(255,106,74,.25); }
+    .tile .liq {
+      position: absolute; left: 0; right: 0; bottom: 0; height: var(--remain, 50%);
+      background: linear-gradient(180deg, rgba(255,255,255,.35), transparent 40%),
+        linear-gradient(90deg, color-mix(in srgb, var(--brand) 75%, #7ed0ff), var(--brand));
+      border-radius: 0 0 12px 12px;
+    }
+    .tile .name {
+      position: absolute; left: 6px; right: 6px; top: 8px; z-index: 2;
+      font-size: 14px; font-weight: 700; letter-spacing: .02em; color: #fff;
+      text-shadow: 0 1px 8px rgba(0,0,0,.65); font-family: var(--display);
+      line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tile .pct {
+      position: absolute; right: 7px; bottom: 5px; z-index: 2;
+      font-size: 13px; font-weight: 600; color: #fff; font-variant-numeric: tabular-nums;
+      text-shadow: 0 1px 8px rgba(0,0,0,.5);
+    }
+
+    /* USAGE B — original logo fill, sharper */
+    .mark {
+      --s: 58px;
+      width: var(--s); height: var(--s); border-radius: 14px; position: relative; overflow: hidden;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+      backdrop-filter: blur(6px);
+    }
+    .mark img {
+      width: var(--s); height: var(--s); display: block;
+      object-fit: contain;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+    /* gray base = empty / used-up look */
+    .mark .g {
+      position: absolute; inset: 0;
+      filter: grayscale(1) brightness(.45) contrast(1.15);
+      -webkit-backface-visibility: hidden;
+      transform: translateZ(0);
+    }
+    .mark.mono .g { filter: brightness(0) invert(.42); }
+    /* color crop from bottom = remaining */
+    .mark .c {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: var(--remain, 50%);
+      overflow: hidden;
+    }
+    .mark .c img {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      width: var(--s); height: var(--s);
+      filter: none;
+    }
+    .mark.mono .c img { filter: brightness(0) invert(.96); }
+    .mark.low { box-shadow: 0 0 0 1px rgba(255,106,74,.45), 0 0 14px rgba(255,106,74,.2); }
+
+    /* PLAN / IDLE */
+    .plan-back { position: absolute; left: 2px; top: 2px; width: 48px; height: 48px; color: var(--amber); font-size: 24px; line-height: 48px; text-align: center; }
+    .plan-nm { position: absolute; left: 50px; top: 10px; font-size: 15px; font-weight: 600; letter-spacing: .06em; }
+    .plan-upd { position: absolute; left: 50px; top: 30px; font-size: 10px; letter-spacing: .18em; color: var(--dim); font-weight: 500; }
+    .bars { position: absolute; left: 14px; right: 14px; top: 54px; }
+    .bar-row { margin-bottom: 16px; }
+    .bar-lab { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: .2em; color: var(--mute); font-weight: 500; }
+    .bar-lab b { color: #fff; font-weight: 600; font-size: 15px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+    .bar-track { height: 4px; margin-top: 8px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.12); }
+    .bar-fill {
+      height: 4px; border-radius: 999px;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 60%, #7ed0ff), var(--brand, var(--amber)));
+    }
+    .plan-foot { position: absolute; left: 14px; right: 14px; bottom: 14px; font-size: 10px; letter-spacing: .14em; color: var(--dim); font-weight: 500; }
+    .plan-foot b { color: var(--amber); }
+    .idle-bat { position: absolute; right: 14px; top: 14px; font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; font-weight: 500; }
+    .idle-time { position: absolute; left: 14px; right: 14px; top: 74px; text-align: center; font-size: 56px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; font-weight: 500; text-shadow: 0 4px 24px rgba(0,0,0,.45); }
+    .idle-date { position: absolute; left: 14px; right: 14px; top: 142px; text-align: center; font-size: 12px; letter-spacing: .22em; color: var(--mute); font-weight: 500; }
+    .idle-hint { position: absolute; left: 16px; right: 16px; bottom: 18px; text-align: center; font-size: 11px; letter-spacing: .16em; color: var(--dim); font-weight: 500; }
+
+    /* TOKEN */
+    .pack-exit { position: absolute; left: 8px; top: 8px; font-size: 10px; letter-spacing: .16em; color: rgba(255,255,255,.55); padding: 6px; font-weight: 600; }
+    .pack-label { position: absolute; left: 0; right: 0; top: 42px; text-align: center; font-size: 11px; letter-spacing: .28em; color: var(--mute); font-weight: 600; }
+    .pack-amt { position: absolute; left: 0; right: 0; top: 64px; text-align: center; font-size: 36px; font-weight: 600; color: #fff8e8; text-shadow: 0 2px 16px rgba(0,0,0,.5); font-variant-numeric: tabular-nums; }
+    .pack-amt .u { font-size: 16px; margin-left: 4px; color: var(--amber); letter-spacing: .08em; }
+    .pack-hit {
+      position: absolute; left: 18%; right: 18%; bottom: 14%; height: 20%; border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1); color: #fff;
+      font-size: 12px; letter-spacing: .2em; font-weight: 600; display: flex; align-items: center; justify-content: center;
+    }
+    .pack-shake { position: absolute; left: 18%; right: 18%; bottom: 4%; text-align: center; color: var(--dim); font-size: 9px; letter-spacing: .14em; }
+
+    /* 抽签 overlay */
+    .oracle {
+      position: absolute; inset: 0; z-index: 4;
+      background: rgba(6,8,14,.72);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 18px 16px;
+    }
+    .oracle .stick {
+      width: 168px; min-height: 148px; border-radius: 12px;
+      background: linear-gradient(160deg, rgba(255,248,232,.96), rgba(255,220,150,.88));
+      color: #2a1c0c; box-shadow: 0 12px 28px rgba(0,0,0,.45);
+      padding: 14px 12px; text-align: center;
+    }
+    .oracle .no {
+      font-size: 11px; letter-spacing: .28em; font-weight: 700; color: #8a5a20;
+    }
+    .oracle .grade {
+      margin-top: 6px; font-size: 22px; font-weight: 700; letter-spacing: .12em;
+      font-family: var(--cn);
+    }
+    .oracle .grade.good { color: #b84a1a; }
+    .oracle .grade.mid { color: #6a4a18; }
+    .oracle .grade.bad { color: #3a3a48; }
+    .oracle .verse {
+      margin-top: 10px; font-size: 12px; line-height: 1.55; font-family: var(--cn);
+      color: #3a2a18; letter-spacing: .04em;
+    }
+    .oracle .hint {
+      margin-top: 12px; font-size: 9px; letter-spacing: .16em; color: rgba(255,255,255,.55);
+    }
+
+    .note { margin-top: 36px; font-size: 12px; color: var(--dim); line-height: 1.6; font-family: var(--cn); }
+    .note code { color: var(--amber); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="kicker">Desk154 · Wave · review wall</p>
+    <h1>全部页面审核墙</h1>
+    <p class="lede">审核墙已按你的选择更新：USAGE 定 <strong>A 液面</strong>，品牌名加大；抽签定 <strong>AI 使用者庙签</strong>。</p>
+    <div class="banner">浏览器打开 <b>http://127.0.0.1:8765/desk154-wave-pages.html</b>（Cursor 里点文件只会看到源码）</div>
+    <div class="locked">
+      <b>已锁定：</b>USAGE = A（液面 = 剩余；品牌字 13px）。抽签 = AI 庙签（上上/中平/下下）。
+      晃动只在 TOKEN 页抽签，不加 Token；全局甩仍留给撤销。
+    </div>
+
+    <h2>1 · 主路径</h2>
+    <div class="wall">
+
+      <div class="slot">
+        <div class="label"><b>DESK</b>闲置 · 居中大图标</div>
+        <div class="screen" style="--veil:.22">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="acts">
+              <div class="hit talk"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div>
+            </div>
+            <div class="pager"><span class="arr">‹</span><span class="mid-dots"><i class="on"></i><i></i></span><span class="arr">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>DESK · REC</b>录音态<span class="tag rec">recording</span></div>
+        <div class="screen" style="--veil:.22">
+          <div class="veil"></div>
+          <div class="rec-chrome"></div>
+          <div class="ui">
+            <div class="keys"><div class="chip">发送</div><div class="chip">取消</div><div class="chip hot">讲话</div></div>
+            <div class="timer">3.2</div>
+            <div class="acts">
+              <div class="halo"></div>
+              <div class="hit talk rec"><svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.93V21h2v-3.07A7 7 0 0019 11h-2z"/></svg></div>
+              <div class="hit stop rec"><svg viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></svg></div>
+            </div>
+            <div class="pager"><span class="arr">‹</span><span class="mid-dots"><i class="on"></i><i></i></span><span class="arr">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>USAGE A · 液面</b>格内液面 = 剩余 · 品牌字加大<span class="tag" style="color:#74ff7a;background:rgba(116,255,122,.12)">已锁定</span></div>
+        <div class="screen" style="--veil:.42">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="usage-head"><div class="k">REMAIN</div><div class="t">USAGE</div></div>
+            <div class="sync">↻</div>
+            <div class="grid">
+              <div class="cell"><div class="tile" style="--remain:72%;--brand:#d97757"><div class="liq"></div><div class="name">Claude</div><div class="pct">72</div></div><div class="cd warn">2h40</div></div>
+              <div class="cell"><div class="tile" style="--remain:48%;--brand:#e8e4dc"><div class="liq"></div><div class="name">Cursor</div><div class="pct">48</div></div><div class="cd">4h12</div></div>
+              <div class="cell"><div class="tile low" style="--remain:14%;--brand:#4a7dff"><div class="liq"></div><div class="name">GLM</div><div class="pct">14</div></div><div class="cd hot">18h</div></div>
+              <div class="cell"><div class="tile" style="--remain:88%;--brand:#9ad0ff"><div class="liq"></div><div class="name">Codex</div><div class="pct">88</div></div><div class="cd">6h22</div></div>
+            </div>
+            <div class="pager"><span class="arr">‹</span><span>1 / 9</span><span class="arr">›</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>USAGE B · Logo 填色</b>对照保留 · 不采用<span class="tag">未选</span></div>
+        <div class="screen" style="--veil:.42">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="usage-head"><div class="k">REMAIN</div><div class="t">USAGE</div></div>
+            <div class="grid">
+              <div class="cell">
+                <div class="mark" style="--remain:72%">
+                  <img class="g" src="logos/claude-code.svg" alt="" />
+                  <div class="c"><img src="logos/claude-code.svg" alt="" /></div>
+                </div>
+                <div class="cd warn">2h40</div>
+              </div>
+              <div class="cell">
+                <div class="mark mono" style="--remain:48%">
+                  <img class="g" src="logos/cursor.svg" alt="" />
+                  <div class="c"><img src="logos/cursor.svg" alt="" /></div>
+                </div>
+                <div class="cd">4h12</div>
+              </div>
+              <div class="cell">
+                <div class="mark low" style="--remain:14%">
+                  <img class="g" src="logos/chatglm-color.svg" alt="" />
+                  <div class="c"><img src="logos/chatglm-color.svg" alt="" /></div>
+                </div>
+                <div class="cd hot">18h</div>
+              </div>
+              <div class="cell">
+                <div class="mark mono" style="--remain:88%">
+                  <img class="g" src="logos/codex.svg" alt="" />
+                  <div class="c"><img src="logos/codex.svg" alt="" /></div>
+                </div>
+                <div class="cd">6h22</div>
+              </div>
+            </div>
+            <div class="pager"><span class="arr">‹</span><span>1 / 9</span><span class="arr">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2>2 · 明细 / 息屏 / Token / 抽签</h2>
+    <div class="wall">
+
+      <div class="slot">
+        <div class="label"><b>PLAN</b>品牌明细</div>
+        <div class="screen" style="--veil:.48">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="plan-back">‹</div>
+            <div class="plan-nm">CLAUDE CODE</div>
+            <div class="plan-upd">TODAY 10:04</div>
+            <div class="bars" style="--brand:#d97757">
+              <div class="bar-row"><div class="bar-lab"><span>5H</span><b>62%</b></div><div class="bar-track"><div class="bar-fill" style="width:62%"></div></div></div>
+              <div class="bar-row"><div class="bar-lab"><span>7D</span><b>41%</b></div><div class="bar-track"><div class="bar-fill" style="width:41%"></div></div></div>
+              <div class="bar-row"><div class="bar-lab"><span>YUAN</span><b>12.40</b></div><div class="bar-track"><div class="bar-fill" style="width:74%"></div></div></div>
+            </div>
+            <div class="plan-foot">swipe back · stale → <b>↻</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>IDLE</b>息屏时钟</div>
+        <div class="screen" style="--veil:.55">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="idle-bat">87%</div>
+            <div class="idle-time">08:36</div>
+            <div class="idle-date">SAT  08 / 22</div>
+            <div class="idle-hint">touch · wake</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>TOKEN</b>点一下 +1K · 自动进位</div>
+        <div class="screen" style="--veil:.35">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="pack-exit">BACK</div>
+            <div class="pack-label">TOKEN</div>
+            <div class="pack-amt">128.5<span class="u">K</span></div>
+            <div class="pack-hit">TAP · +1K</div>
+            <div class="pack-shake">SHAKE · 抽签</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>AI 庙签 · 上上</b>晃动抽签 · 不加 Token</div>
+        <div class="screen" style="--veil:.35">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="pack-exit">BACK</div>
+            <div class="pack-label">TOKEN</div>
+            <div class="pack-amt">128.5<span class="u">K</span></div>
+            <div class="oracle">
+              <div class="stick">
+                <div class="no">AI 庙 · 第十七签</div>
+                <div class="grade good">上上</div>
+                <div class="verse">Context 清明 · 一问即对<br/>宜开新 Agent · 忌空口复读</div>
+              </div>
+              <div class="hint">再晃重抽 · 点空白收起</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>AI 庙签 · 中平</b></div>
+        <div class="screen" style="--veil:.35">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="oracle">
+              <div class="stick">
+                <div class="no">AI 庙 · 第卅二签</div>
+                <div class="grade mid">中平</div>
+                <div class="verse">额度尚余 · 灵感半醒<br/>宜小步 prompt · 忌一次塞十事</div>
+              </div>
+              <div class="hint">再晃重抽 · 点空白收起</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="label"><b>AI 庙签 · 下下</b></div>
+        <div class="screen" style="--veil:.35">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="oracle">
+              <div class="stick">
+                <div class="no">AI 庙 · 第四十八签</div>
+                <div class="grade bad">下下</div>
+                <div class="verse">幻觉将至 · Token 空烧<br/>宜停手读 diff · 忌连夜加需求</div>
+              </div>
+              <div class="hint">再晃重抽 · 点空白收起</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2>3 · USAGE A 品牌字特写（已锁定）</h2>
+    <div class="wall">
+      <div class="slot">
+        <div class="label"><b>高剩余</b>液面高 · 大号品牌字</div>
+        <div class="screen" style="--veil:.42">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="usage-head"><div class="k">REMAIN</div><div class="t">USAGE</div></div>
+            <div class="grid">
+              <div class="cell"><div class="tile" style="--remain:92%;--brand:#d97757"><div class="liq"></div><div class="name">Claude</div><div class="pct">92</div></div><div class="cd">0h40</div></div>
+              <div class="cell"><div class="tile" style="--remain:100%;--brand:#e8e4dc"><div class="liq"></div><div class="name">Cursor</div><div class="pct">100</div></div><div class="cd">—</div></div>
+              <div class="cell"><div class="tile" style="--remain:80%;--brand:#4a7dff"><div class="liq"></div><div class="name">GLM</div><div class="pct">80</div></div><div class="cd">3h</div></div>
+              <div class="cell"><div class="tile" style="--remain:76%;--brand:#9ad0ff"><div class="liq"></div><div class="name">Codex</div><div class="pct">76</div></div><div class="cd">5h</div></div>
+            </div>
+            <div class="pager"><span class="arr">‹</span><span>1 / 9</span><span class="arr">›</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="slot">
+        <div class="label"><b>低剩余</b>液面见底 · 热边警告</div>
+        <div class="screen" style="--veil:.42">
+          <div class="veil"></div>
+          <div class="ui">
+            <div class="usage-head"><div class="k">REMAIN</div><div class="t">USAGE</div></div>
+            <div class="sync">↻</div>
+            <div class="grid">
+              <div class="cell"><div class="tile low" style="--remain:18%;--brand:#d97757"><div class="liq"></div><div class="name">Claude</div><div class="pct">18</div></div><div class="cd hot">11h</div></div>
+              <div class="cell"><div class="tile low" style="--remain:12%;--brand:#e8e4dc"><div class="liq"></div><div class="name">Cursor</div><div class="pct">12</div></div><div class="cd hot">14h</div></div>
+              <div class="cell"><div class="tile low" style="--remain:8%;--brand:#4a7dff"><div class="liq"></div><div class="name">GLM</div><div class="pct">8</div></div><div class="cd hot">20h</div></div>
+              <div class="cell"><div class="tile" style="--remain:40%;--brand:#9ad0ff"><div class="liq"></div><div class="name">Codex</div><div class="pct">40</div></div><div class="cd">8h</div></div>
+            </div>
+            <div class="pager"><span class="arr">‹</span><span>1 / 9</span><span class="arr">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">
+      已锁：USAGE <b>A</b> + 大品牌字；抽签 = <b>AI 使用者庙签</b>。整体无异议即可回「确认」写正式 spec。<br/>
+      <code>http://127.0.0.1:8765/desk154-wave-pages.html</code>
+    </p>
+  </div>
+</body>
+</html>

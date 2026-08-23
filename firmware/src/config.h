@@ -13,6 +13,9 @@ struct DeskConfig {
     int alert_threshold = 90;
     char voice_mode[12] = "device";   // device | hid
     char voice_target[12] = "cursor"; // cursor | claude | codex
+    uint8_t wall_id = 0;              // 0..WALL_COUNT-1
+    uint16_t idle_sec = 300;          // 0 = never blank; default 5 min full off
+    uint8_t beep_vol = 80;            // 0 = mute, 100 = full prompt volume
 };
 
 extern DeskConfig gCfg;

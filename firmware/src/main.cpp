@@ -14,7 +14,12 @@
 #include "buttons.h"
 
 void setup() {
+    /* Clear latched BAT_EN hold; keep battery path on for LCD rail. */
     board_power_hold();
+    pinMode(LCD_BL, OUTPUT);
+    digitalWrite(LCD_BL, HIGH);
+    display_set_backlight(100);
+
     serial_init();
     Serial.println("[BOOT] 1 serial");
     config_load();
@@ -43,6 +48,7 @@ void loop() {
     imu_loop();
     net_loop();
     battery_update();
+    display_poll();
     ui_refresh_from_status();
     ui_loop();
     beep_loop();

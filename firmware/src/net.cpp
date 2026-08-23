@@ -123,7 +123,13 @@ static void poll_http(bool fresh) {
     if (gPollingNow || gStatus.ptt || voice_is_busy()) return;
     if (!fresh && gStatus.key_busy) return;
     if (!try_wifi()) {
-        Serial.println("#NEEDQ");
+        uint32_t now = millis();
+        static uint32_t lastNeed = 0;
+        gLastPollAt = now; /* do not notify the poll task every 5 ms */
+        if (now - lastNeed > 2000) {
+            lastNeed = now;
+            Serial.println("#NEEDQ");
+        }
         return;
     }
     gPollingNow = true;

@@ -1,86 +1,111 @@
 # Desk154 交接文档
 
-更新于：2026-08-20
+更新于：2026-08-23
 
-## 设备
+## 一句话
+
+桌上的 1.54″ 圆屏：看各家 Coding Plan 额度、按住说话打进当前对话框、额度页摇三下抽 AI 签。密钥只在 Windows 主机。
+
+## 设备（只这一块）
 
 | 项 | 值 |
 |---|---|
 | 板子 | Waveshare ESP32-S3-Touch-LCD-1.54（SKU 33869） |
 | MAC | `28:84:85:56:EE:E0` |
-| 应用口（CDC） | 通常 **COM8**（SER=`28848556EEE0`） |
+| 应用口（USB-JTAG CDC） | 通常 **COM8**（SER=`28848556EEE0`） |
 | 下载口（ROM） | 通常 **COM7**（SER=`28:84:85:56:EE:E0`） |
 | PIO env | `waveshare_lcd_154` |
-| Host | `E:\ai-coding-desk\host\desk_host.py` |
+| Flash | **DIO 16MB**（不要 QIO） |
+| Host | `host/desk_host.py`（买家包：`Desk154.exe`） |
 
-**禁止**烧 PaperColor（COM4，`44:1B:F6:C1:7E:C8`）或其它 ESP。Flash 模式用 **DIO**，不要 QIO。
+**禁止**烧 PaperColor（COM4）以及其它 ESP（常见坑：COM9 `28:84:85:76:2F:08`、COM11 `CC:8D:A2:E0:BF:88`）。
+
+USB-JTAG 卡住（Win 错误 31 / COM8 消失）：拔 USB **和** 电池，先电池后 USB。不要发 `#DOWNLOAD`。
 
 ## 物理键（面对屏幕 L→R）
 
 **BOOT | PWR | PLUS** → 屏上顶栏：**发送 | 取消 | 讲话**
 
-| 键 | 功能 |
-|---|---|
-| BOOT / 发送 | Enter（录音中忽略） |
-| PWR / 取消 | 录音取消；运行中 Stop；空闲↑ |
-| PLUS / 讲话 | 按住说话，松开注入文本（不回车） |
+| 键 | 短按 | 长按 / 按住 |
+|---|---|---|
+| BOOT | Enter（录音中忽略） | 下载绑带，固件不占用 |
+| PWR | 录音=取消；Agent 跑着=Stop；空闲=#PWR 刷新 | **约 3 秒熄屏**（不是关机） |
+| PLUS | 忽略（太短不当说话） | 按住说话，松开注入（不回车） |
 
-## TALK / DESK 页（当前 UI）
+唤醒：点屏或任意键（第一下只亮屏）。**摇一摇不唤醒。**  
+真断电：拔 USB。USB 插着时 MCU 一直活着，方便看额度和传语音。
 
-- 顶栏：三个橘黄圆角按钮，白字「发送 / 取消 / 讲话」（无 BOOT/PWR/PLUS 英文）
-- **已删除**：语音输入标题、电池%、转写乱码行
-- 主区：左侧大圆钮 **麦克风图标**（开始/结束录音），右侧大圆钮 **禁止图标**（取消/Stop）
-- 录音中：中间显示秒数 `N.N`；麦克风光晕 + 图标蓝/白脉冲变色；顶条闪烁
+旧版 `board_power_off()` 在 PWR 仍按着时 deep-sleep，ext0=LOW 会立刻醒来，所以会出现「黑一下又亮」。已改成 `display_blank()`。
 
-图标字体：`firmware/src/fonts/font_icons.c`（FA solid `mic`/`ban`）。源 TTF 不入库（`.gitignore` 已忽略 `*.ttf`）。
+## 现在固件里有什么
+
+- DESK：顶栏三中文钮 + 麦圆 + 方块结束（结束并发送，不是取消）
+- USAGE：品牌额度环；点进 PLAN（5H / 7D / 1M；Cursor = AUTO / API）
+- Settings：六壁纸 Wave / Ember / Ink / Phosphor / Night / Stone（NVS `wall_id`）
+- 空闲：默认 5 分钟全黑（背光+RGB 灭）；NVS `idle_sec`，旧值 180 会迁成 300
+- **AI 庙**：100 签，不放回洗牌；**只在 USAGE 页** 3.5 秒内连晃 3 下；其它页忽略（防口袋）
+- 语音：没 Wi‑Fi 时 WAV 走 USB 串口；企业 WPA2-Enterprise 上不了板载 Wi‑Fi
+- 注入：跟随当前焦点编码窗口，无设置里的「发到」
+- 趴下（prone）：静音 / 关 RGB；翻回来恢复
+- 彩蛋：DESK 长按方块 STOP → TOKEN 压缩机
 
 ## 烧录流程（可靠）
 
-1. 停 host：结束所有 `desk_host.py`
-2. COM8 @ 1200 触摸进下载 → 口跳到 COM7
-3. esptool **4.5.1**（`tool-esptoolpy@1.40501.0`）DIO 16MB，`--before no_reset --after no_reset`
-4. esptool **5.x** `--after watchdog-reset` 出下载模式 → 回到 COM8
-5. 确认 MAC `28:84:85:56:ee:e0`
-6. 起 host：`DESK_NO_TRAY=1`，`py -3 -u desk_host.py`（监听 COM8）
+1. 停所有 `desk_host.py` / `Desk154.exe`
+2. COM8 @ 1200 触摸进下载（常报 OSError 22/433）→ 口变成 COM7，序列号带冒号
+3. `chip-id --before no_reset` 必须看到 `28:84:85:56:ee:e0`
+4. esptool **4.5.1** DIO 16MB `--before no_reset --after no_reset` 写 bootloader + partitions + boot_app0 + firmware
+5. esptool **5.x** `--before no-reset --after watchdog-reset` 出下载（不要 DTR hard-reset，会把屏弄黑）
+6. COM8 回来后：`$env:DESK_NO_TRAY=1; py -3 -u desk_host.py`
 
-## Host / 额度
+打开串口：DTR true，RTS false；**不要脉冲 DTR**。
 
-- Trae + 扣子（Coze）collector 已接；USAGE 品牌索引 7 = `coze`（非 MiniMax）
-- **Claude Code 品牌**：DeepSeek 余额挂在 **Claude Code** logo/PLAN 上（标题 CLAUDE CODE、脚注 YUAN）；USAGE **不单独出** DeepSeek 瓦片。Host 仍分 `providers.claude` / `providers.deepseek` 采集
-- 网页原型 `docs/desk154-live.html` 会拉 `127.0.0.1:8787/v1/status` 同步开关与余额
-- 额度叮：水滴音 `play_ding()`，日志 `[BEEP] drop`
-- Coze logo：改 `frames.rgb565` 后靠 `extra_script.py` 的 sha256 强制 relink `logos.S`
+## Host / 买家包
+
+- 采集：Claude、Cursor、Codex、GLM、Kimi、Trae、扣子；DeepSeek 余额挂在 Claude Code 砖上
+- 打包：`host/pack_windows.ps1` → `host/dist/Desk154-Windows.zip`
+- 向导：USB 配对、可选 Wi‑Fi、可选 SiliconFlow Key、开机自启
+- 冻结数据：`%LocalAppData%\Desk154`
+- 客户说明：`docs/setup-buyer.md`（客户不烧录、不 pip）
 
 ## 滑动导航
 
-- DESK 左滑 → USAGE（不是 PACK）
-- USAGE 页翻完 → PACK
-- Logo 点进 PLAN；默认三行 **5H / 7D / 1M**（GLM 第三窗也是月度工具额度，标 1M，不再写 MCP）；Cursor 据实只显示 **AUTO / API**
-- PLAN 任意滑回 USAGE
+- DESK 左滑 → USAGE → 再滑 → Settings
+- Settings 右滑或 ‹ 回上一页
+- Logo 点进 PLAN；PLAN 任意滑回 USAGE
+- PACK/TOKEN 仍靠 STOP 长按，USAGE 页不靠摇一摇进游戏
 
-## 关键改动文件
+## Flash 占用
+
+六壁纸 RGB565 @ 240×240 + 应用 ≈ 一半 16MB DIO（以 `pio run -e waveshare_lcd_154` 的 Checking size 为准）。
+
+## 关键路径
 
 | 路径 | 说明 |
 |---|---|
-| `firmware/src/ui.cpp` | DESK/TALK 布局、顶栏中文、双圆图标钮、录音计时+脉冲 |
-| `firmware/src/fonts/font_icons.{h,c}` | 麦克风 / 禁止图标 |
-| `firmware/src/fonts/font_idle_16.c` | 含「发送取消讲话」等汉字 |
-| `firmware/src/beep.cpp` | 水滴叮 |
-| `host/collectors/trae.py` / `coze.py` | 额度采集 |
-| `firmware/extra_script.py` | logo/pack incbin hash |
-| `docs/keys.md` | 按键说明 |
+| `firmware/src/ui.cpp` | 页面、壁纸、抽签浮层、5 分钟熄屏 |
+| `firmware/src/buttons.cpp` | 三键；PWR 3 秒 `display_blank()` |
+| `firmware/src/display.cpp` | 熄屏 / 唤醒；触点吞掉，避免黑屏立刻被点亮 |
+| `firmware/src/imu.cpp` | 抽签仅 USAGE；熄屏不唤醒 |
+| `firmware/src/oracle_lots.cpp` | 100 条 AI 签 |
+| `firmware/src/wave_img.*` + `wall_*.S` | 壁纸 |
+| `host/desk_host.py` | 托盘 + 额度 + 串口 |
+| `host/inject.py` | 跟随焦点注入 |
+| `host/setup_gui.py` / `setup_wizard.py` | 买家向导 |
+| `docs/setup-buyer.md` | 开箱卡片 |
+| `docs/keys.md` | 按键与串口 |
 
 ## 未决 / 注意
 
-- 企业 Wi‑Fi（WPA2-Enterprise）设备连不上时，语音走 USB 串口 WAV → host SenseVoice
-- 屏上转写中文依赖 `font_idle_*` 字库；缺字会方框/乱码（TALK 页已不再显示转写行）
-- 交接文档：`docs/handoff.md`；进展已入库（见 git log）
-- **Claude / DeepSeek 错位（已修）**：旧逻辑把 DeepSeek 余额挂到 Claude，且 PLAN 把 token-only Claude 改名为 DEEPSEEK。现已拆成 `claude`（OAuth）+ `deepseek`（余额）；PLAN 标题跟真实品牌，余额脚注 `YUAN x.xx`
+- 企业 Wi‑Fi 连不上时语音走 USB WAV
+- 屏上汉字依赖 `font_idle_*`；缺字会方框
+- 真关机做不干净：USB 供电时 MCU 不睡；`BAT_EN` 拉低曾砖过 LCD，所以产品语义是熄屏不是断电
+- GitHub Pages 演示：`docs/desk154-lab.html`
 
 ## 快速自检
 
-1. 顶栏三中文橘钮
-2. 中间无电池/乱码；两大圆：麦 / 禁
-3. 点麦 → 秒数出现 + 麦钮脉冲
-4. 点禁或 PWR → 取消录音
-5. host 日志 COM8，`[OK] poll`
+1. 顶栏三中文橘钮；两大圆：麦 / 方块
+2. 点麦 → 秒数 + 脉冲；PWR 或顶栏取消 → 丢录音
+3. 额度页连晃 3 下出签；DESK 页晃不动签
+4. 长按 PWR 3 秒保持黑；点屏或按键亮；摇不亮
+5. host 盯 COM8，额度数字会变

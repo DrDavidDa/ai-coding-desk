@@ -18,20 +18,28 @@ Use the computer keyboard for `n` and MODE.
 | Button | GPIO | Short | Long / hold |
 |---|---|---|---|
 | BOOT | 0 | Enter (Play/submit). Ignored while recording. | download strap |
-| PWR | 5 | recording: cancel. Run: Stop. Idle coding: Up. Other apps: sync. | 3 s power off |
+| PWR | 5 | recording: cancel. Run: Stop. Idle coding: Up. Other apps: sync. | 3 s blank screen (MCU stays up) |
 | PLUS | 4 | ignored (device-mic) | talk; release injects text (no Enter) |
 
-**Shake** (not a key tap): recording → cancel. Agent running → Stop. Idle → undo last inject (or Ctrl+Z). Compressor page → press.
+**Settings (Phase 1):** six wallpapers (Wave/Ember/Ink/Phosphor/Night/Stone), voice mode, inject target, PC status, warn thresholds, idle timer, SYNC. NVS keys `wall_id`, `idle_sec`; serial `#CFGLINE|wall_id=N`, `#CFGLINE|idle_sec=N`.
+
+**Shake** (not a key tap): recording → cancel. Agent running → Stop. **任意页连晃 3 下**（约 3.5 秒内）→ AI 庙抽签浮层；签已出时再晃 = 重抽，点空白收起。TOKEN 页不响应晃动手势。单次晃后停顿较久 → undo。
 **Flip face-down**: mute dings, block talk/inject, RGB off. Backlight stays full on. Flip back up restores audio/RGB.
 **Knock the desk**: ignored. This panel has no useful backlight range; PWM stays 100%.
 
-Touch: DESK (顶栏发送/取消/讲话 + 麦克风/禁止圆钮；录音显示秒数并脉冲) swipe left → USAGE.
+Touch: DESK (顶栏发送/取消/讲话 + 麦克风/**方块结束**圆钮；录音显示秒数并脉冲) swipe left → USAGE.
 Caps are **global** on every page: PLUS talks without forcing DESK; REC shows a top flash
-bar + timer pill when away from DESK. Swipe past last USAGE page does **not** open the game.
-Compressor easter egg: long-press SYNC (~1.2s) or tap USAGE title 5×.
+bar + timer pill when away from DESK. Swipe past last USAGE page opens **Settings** (not dead-end).
+**Settings entry:** long-press top **发送** ~1.2s on DESK, or swipe left past last USAGE page.
+Settings exit: swipe right or ‹ back chip → previous page (DESK or USAGE).
+**记住：右侧圆钮 = 方块 STOP = 结束录音并发送（不是取消）。取消只走顶栏「取消」/ PWR。**
+**Easter eggs (independent):**
+- **TOKEN** — DESK 页长按方块 STOP ~1.2s（未录音）→ 压缩机 +1K 游戏
+- **AI 庙** — 任意页 **连晃 3 下**（约 3.5 秒内），或 USAGE 顶栏标题连点 5 次 → 直接出签
 Swipe right on DESK stays. Logo tap opens PLAN; any swipe on PLAN returns to USAGE.
 Quota: 70% one ding, 90% one ding and again every 2 min. Lamp already goes red at 90%.
-PACK: tap or shake queues a press. Counter is `节省 {amt} 词元`, starts at 0K. Wood knock plays 35ms into the piston-down frame. Hold 1.4s to reset. Token count persists.
+USAGE: **liquid tiles** = remaining % (Wave skin). Sync is a small ↻ chip.
+PACK/TOKEN: tap queues compressor (+~1K tokens, auto K/M/B/T). Hold 1.4s to reset. Token count persists. (No oracle on this page.)
 
 BLE name: `Desk154`. Pair in Windows Bluetooth settings. No host BLE stack required.
 

@@ -3,6 +3,8 @@
 
 extern const lv_font_t font_icons;
 
-/* Font Awesome solid: ban / microphone */
-#define ICON_BAN "\xEF\x81\x9E"
-#define ICON_MIC "\xEF\x84\xB0"
+/* Font Awesome solid: stop (square) / microphone
+ * Stop = end recording & send — NOT cancel. Cancel is top chip / PWR. */
+#define ICON_STOP "\xEF\x81\x8D"  /* U+F04D */
+#define ICON_MIC  "\xEF\x84\xB0"  /* U+F130 */
+#define ICON_BAN ICON_STOP        /* legacy alias — do not use for cancel */

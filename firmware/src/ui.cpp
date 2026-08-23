@@ -6,8 +6,10 @@
 #include "beep.h"
 #include "net.h"
 #include "config.h"
+#include "oracle_lots.h"
 #include "pack_img.h"
 #include "logos_img.h"
+#include "wave_img.h"
 #include "fonts/font_idle.h"
 #include "fonts/font_icons.h"
 #include "display.h"
@@ -17,30 +19,32 @@
 #include <cstring>
 #include <ctime>
 
-enum UiPage { PAGE_DESK = 0, PAGE_USAGE, PAGE_PACK, PAGE_IDLE, PAGE_PLAN, PAGE_COUNT };
-static const uint32_t kIdleMs = 180000;
+enum UiPage { PAGE_DESK = 0, PAGE_USAGE, PAGE_PACK, PAGE_IDLE, PAGE_PLAN, PAGE_SETTINGS, PAGE_COUNT };
 
-static const lv_color_t C_BG = lv_color_hex(0x100E0C);
-static const lv_color_t C_INK = lv_color_hex(0xF1E6D4);
-static const lv_color_t C_MUTE = lv_color_hex(0x8D8274);
-static const lv_color_t C_COPPER = lv_color_hex(0xD4A06A);
-static const lv_color_t C_HOT = lv_color_hex(0xC45C3A);
-static const lv_color_t C_ORANGE = lv_color_hex(0xE87B1A);
-static const lv_color_t C_WELL = lv_color_hex(0x2A2622);
+/* Wave skin (match docs/desk154-wave-pages.html). */
+static const lv_color_t C_BG = lv_color_hex(0x0B0D12);
+static const lv_color_t C_INK = lv_color_hex(0xF7F4EF);
+static const lv_color_t C_MUTE = lv_color_hex(0xA8B0BC);
+static const lv_color_t C_COPPER = lv_color_hex(0xFFB020);
+static const lv_color_t C_HOT = lv_color_hex(0xFF6A4A);
+static const lv_color_t C_ORANGE = lv_color_hex(0xFFB020);
+static const lv_color_t C_WELL = lv_color_hex(0x1A2030);
 static const lv_color_t C_WHITE = lv_color_hex(0xFFFFFF);
-static const lv_color_t C_GOLD = lv_color_hex(0xF0C14A);
+static const lv_color_t C_GOLD = lv_color_hex(0xFFB020);
 static const lv_color_t C_PACK_LAB = lv_color_hex(0xFFF8E8);
 static const lv_color_t C_PACK_AMT = lv_color_hex(0xFFE04E);
 static const lv_color_t C_PACK_SPARK = lv_color_hex(0xFFE35A);
-static const lv_color_t C_GRAY = lv_color_hex(0x6A645C);
-static const lv_color_t C_IDLE = lv_color_hex(0x090807);
-static const lv_color_t C_PLAN = lv_color_hex(0x0E0C0B);
+static const lv_color_t C_GRAY = lv_color_hex(0x6A7080);
+static const lv_color_t C_IDLE = lv_color_hex(0x06080E);
+static const lv_color_t C_PLAN = lv_color_hex(0x080A10);
 static const lv_color_t C_PLUS = lv_color_hex(0x74FF7A);
-static const lv_color_t C_STOP_REC = lv_color_hex(0x241C16);
+static const lv_color_t C_STOP_REC = lv_color_hex(0x241820);
 static const lv_color_t C_LAMP = lv_color_hex(0xD8D0C4);
-static const lv_color_t C_TALK = lv_color_hex(0x7EC8FF);
+static const lv_color_t C_TALK = lv_color_hex(0x7ED0FF);
 static const lv_color_t C_RUN = lv_color_hex(0x3D7DFF);
-static const lv_color_t C_TIME = lv_color_hex(0xF1E6D4);
+static const lv_color_t C_TIME = lv_color_hex(0xF7F4EF);
+static const lv_color_t C_GLASS = lv_color_hex(0xFFFFFF);
+static const lv_color_t C_VEIL = lv_color_hex(0x06080E);
 
 enum { BR_MONO = 1, BR_INK = 2 };
 
@@ -96,13 +100,28 @@ static const BrandMeta kBrands[LOGO_COUNT] = {
 static int sPage = PAGE_DESK;
 static int sUsagePage = 0;
 static int sPlanIdx = -1;
-static bool sPackFromUsage = false;
+static int sPackReturnPage = PAGE_DESK;
+static int sSettingsFrom = PAGE_DESK;
+static uint32_t sBootDownAt = 0;
+static bool sBootEggFired = false;
+static bool sChromeDark = false;
+static lv_obj_t *sWallImg[PAGE_COUNT] = {};
+static lv_obj_t *sSetBack = nullptr;
+static lv_obj_t *sSetPanel = nullptr;
+static lv_obj_t *sWallThumb[6] = {};
+static lv_obj_t *sSetValVol = nullptr;
+static lv_obj_t *sSetValPc = nullptr;
+static lv_obj_t *sWallName[6] = {};
+
 static lv_obj_t *sScreens[PAGE_COUNT];
 static int16_t sSwipeX = -1;
 static int16_t sSwipeY = -1;
 static int16_t sSwipeAbs = 0;
+static int16_t sDragMax = 0;
+static uint32_t sTapLockUntil = 0;
 static bool sIdlePress = false;
 
+static lv_obj_t *sLineBg = nullptr;
 static lv_obj_t *sLine = nullptr;
 static lv_obj_t *sTalkHalo = nullptr;
 static lv_obj_t *sTalkBtn = nullptr;
@@ -121,6 +140,8 @@ static lv_obj_t *sRecPillLab = nullptr;
 static lv_obj_t *sUsageTitle = nullptr;
 static lv_obj_t *sSyncHit = nullptr;
 static uint32_t sSyncDownAt = 0;
+static uint32_t sStopDownAt = 0;
+static bool sStopEggFired = false;
 static uint8_t sUsageTitleTaps = 0;
 static uint32_t sUsageTitleTapAt = 0;
 
@@ -130,6 +151,12 @@ static lv_obj_t *sGray[4] = {};
 static lv_obj_t *sClip[4] = {};
 static lv_obj_t *sColor[4] = {};
 static lv_obj_t *sCd[4] = {};
+static lv_obj_t *sName[4] = {};
+static lv_obj_t *sPct[4] = {};
+static lv_obj_t *sOracle = nullptr;
+static lv_obj_t *sOracleNo = nullptr;
+static lv_obj_t *sOracleGrade = nullptr;
+static lv_obj_t *sOracleVerse = nullptr;
 static lv_obj_t *sPager = nullptr;
 static lv_obj_t *sPagerNum = nullptr;
 
@@ -192,12 +219,82 @@ static void plan_paint();
 static void wake_idle();
 static void paint_lamp();
 static void brand_sync_live();
+static void make_pack(lv_obj_t *scr);
+static void make_oracle_overlay(lv_obj_t *parent);
+static void oracle_hide();
+static void open_settings(int from_page);
+static void close_settings();
+static void settings_paint();
+static void ui_apply_wallpaper(uint8_t id);
+static uint32_t idle_ms();
 static int clamp100(int v);
+static bool is_tap(lv_event_code_t code);
 
 static void paint_scr(lv_obj_t *scr, lv_color_t bg) {
     lv_obj_set_style_bg_color(scr, bg, 0);
     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
     lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
+}
+
+static uint32_t idle_ms() {
+    if (gCfg.idle_sec == 0) return 0xFFFFFFFFu;
+    return (uint32_t)gCfg.idle_sec * 1000u;
+}
+
+static const char *kWallNames[6] = {"WAVE", "EMBER", "INK", "PHOS", "NIGHT", "STONE"};
+
+static void ui_apply_wallpaper(uint8_t id) {
+    if (id >= WALL_COUNT) id = 0;
+    gCfg.wall_id = id;
+    config_save();
+    sChromeDark = (id == 2);
+    for (int i = 0; i < PAGE_COUNT; i++) {
+        if (sWallImg[i]) lv_img_set_src(sWallImg[i], wall_img_get(id));
+    }
+    settings_paint();
+    ui_refresh_from_status();
+    ui_toast(kWallNames[id]);
+}
+
+static void attach_wave(lv_obj_t *scr, int page_idx, lv_opa_t veil_opa) {
+    uint8_t wid = gCfg.wall_id;
+    if (wid >= WALL_COUNT) wid = 0;
+    lv_obj_t *img = lv_img_create(scr);
+    lv_img_set_src(img, wall_img_get(wid));
+    lv_obj_align(img, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_clear_flag(img, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(img, LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
+    lv_obj_move_background(img);
+    if (page_idx >= 0 && page_idx < PAGE_COUNT) sWallImg[page_idx] = img;
+
+    lv_obj_t *veil = lv_obj_create(scr);
+    lv_obj_remove_style_all(veil);
+    lv_obj_set_size(veil, 240, 240);
+    lv_obj_set_style_bg_color(veil, C_VEIL, 0);
+    lv_obj_set_style_bg_opa(veil, veil_opa, 0);
+    lv_obj_clear_flag(veil, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(veil, LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
+    lv_obj_align(veil, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_move_to_index(veil, 1);
+}
+
+static void brand_short(int idx, char *out, size_t cap) {
+    if (idx < 0 || idx >= LOGO_COUNT || cap < 2) {
+        if (cap) out[0] = 0;
+        return;
+    }
+    const char *n = kBrands[idx].name;
+    size_t i = 0;
+    while (n[i] && n[i] != ' ' && i + 1 < cap) {
+        out[i] = n[i];
+        i++;
+    }
+    out[i] = 0;
+    if (i > 3) {
+        for (size_t k = 1; k < i; k++) {
+            if (out[k] >= 'A' && out[k] <= 'Z') out[k] = (char)(out[k] - 'A' + 'a');
+        }
+    }
 }
 
 static lv_obj_t *make_label(lv_obj_t *p, const lv_font_t *font, lv_color_t col) {
@@ -229,26 +326,66 @@ static void style_hit(lv_obj_t *b, lv_color_t bg) {
     lv_obj_set_style_radius(b, 0, LV_PART_MAIN);
 }
 
+static void tap_lock() {
+    sTapLockUntil = millis() + 450;
+}
+
+static bool tap_was_swipe() {
+    if ((int32_t)(millis() - sTapLockUntil) < 0) return true;
+    return sDragMax > 14 || sSwipeAbs > 14;
+}
+
+static void swipe_track_point(lv_point_t p) {
+    if (sSwipeX < 0) return;
+    int dx = p.x - sSwipeX;
+    int dy = p.y - sSwipeY;
+    int adx = dx < 0 ? -dx : dx;
+    int ady = dy < 0 ? -dy : dy;
+    int m = adx > ady ? adx : ady;
+    if (m > sDragMax) sDragMax = (int16_t)m;
+    sSwipeAbs = sDragMax;
+}
+
 static void on_hit_press(lv_event_t *e) {
     if (lv_event_get_code(e) != LV_EVENT_PRESSED) return;
-    /* Buttons clear EVENT_BUBBLE, so screen never sees PRESSED and sSwipeAbs
-       would stay stale after a swipe — every later tap would be ignored. */
-    sSwipeAbs = 0;
-    sSwipeX = -1;
-    sSwipeY = -1;
+    lv_indev_t *indev = lv_indev_get_act();
+    if (indev) {
+        lv_point_t p;
+        lv_indev_get_point(indev, &p);
+        sSwipeX = p.x;
+        sSwipeY = p.y;
+        sSwipeAbs = 0;
+        sDragMax = 0;
+    }
     ui_note_activity();
 }
 
-static lv_obj_t *make_hit(lv_obj_t *parent, lv_coord_t w, lv_coord_t h, lv_color_t bg, lv_event_cb_t cb) {
+static void swipe_unblock_nav() {
+    /* Do not cancel rec here. CST816 tap jitter was matching a swipe, so
+       ending a talk-tap deleted the WAV before ASR. */
+}
+
+static void on_swipe(lv_event_t *e);
+
+static lv_obj_t *make_hit(lv_obj_t *parent, lv_coord_t w, lv_coord_t h, lv_color_t bg, lv_event_cb_t cb,
+                          void *user_data = nullptr) {
     lv_obj_t *b = lv_obj_create(parent);
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, h);
     style_hit(b, bg);
     lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_clear_flag(b, LV_OBJ_FLAG_EVENT_BUBBLE);
+    /* Bubble press/gesture so page swipe still works when the finger
+       starts on a big hit target (mic / STOP / liquid tiles). */
+    lv_obj_add_flag(b, LV_OBJ_FLAG_EVENT_BUBBLE);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    lv_obj_set_ext_click_area(b, 10);
     lv_obj_add_event_cb(b, on_hit_press, LV_EVENT_PRESSED, nullptr);
-    if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_event_cb(b, on_swipe, LV_EVENT_PRESSING, nullptr);
+    lv_obj_add_event_cb(b, on_swipe, LV_EVENT_RELEASED, nullptr);
+    lv_obj_add_event_cb(b, on_swipe, LV_EVENT_GESTURE, nullptr);
+    /* SHORT_CLICKED tolerates CST816 jitter better than CLICKED alone. */
+    if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_SHORT_CLICKED, user_data);
     return b;
 }
 
@@ -359,6 +496,12 @@ static void pack_draw_queue() {
 }
 
 static uint32_t pack_rand(uint32_t minv, uint32_t maxv) {
+    static bool sSeeded = false;
+    if (!sSeeded) {
+        sSeeded = true;
+        sPackRng ^= (uint32_t)esp_random() ^ (millis() * 0x9E3779B9u);
+        if (sPackRng == 0) sPackRng = 0xC05EED;
+    }
     sPackRng = 1664525u * sPackRng + 1013904223u;
     return minv + (sPackRng % (maxv - minv + 1));
 }
@@ -412,6 +555,77 @@ void ui_pack_press() {
     pack_start_cycle(now);
 }
 
+static void oracle_cn_num(uint32_t n, char *out, size_t cap) {
+    static const char *d[] = {"", "一", "二", "三", "四", "五", "六", "七", "八", "九"};
+    if (!out || cap < 12 || n < 1 || n > 100) {
+        if (out && cap) out[0] = 0;
+        return;
+    }
+    if (n == 100) {
+        snprintf(out, cap, "一百");
+        return;
+    }
+    if (n < 10) {
+        snprintf(out, cap, "%s", d[n]);
+        return;
+    }
+    if (n == 10) {
+        snprintf(out, cap, "十");
+        return;
+    }
+    uint32_t tens = n / 10, ones = n % 10;
+    if (tens == 1) snprintf(out, cap, "十%s", ones ? d[ones] : "");
+    else snprintf(out, cap, "%s十%s", d[tens], ones ? d[ones] : "");
+}
+
+/* 100 lots like a temple bucket: draw without replacement, then reshuffle. */
+static uint8_t sOracleDeck[ORACLE_LOT_COUNT];
+static uint8_t sOracleDeckN = 0;
+
+static void oracle_shuffle_deck() {
+    for (uint32_t i = 0; i < ORACLE_LOT_COUNT; i++) sOracleDeck[i] = (uint8_t)i;
+    for (uint32_t i = ORACLE_LOT_COUNT - 1; i > 0; i--) {
+        uint32_t j = pack_rand(0, i);
+        uint8_t t = sOracleDeck[i];
+        sOracleDeck[i] = sOracleDeck[j];
+        sOracleDeck[j] = t;
+    }
+    sOracleDeckN = ORACLE_LOT_COUNT;
+}
+
+/* AI temple oracle — global overlay; enter via 3 shakes or USAGE title ×5. */
+void ui_pack_oracle() {
+    if (sOracleDeckN == 0) oracle_shuffle_deck();
+    uint32_t i = sOracleDeck[--sOracleDeckN];
+    const OracleLot *L = &kOracleLots[i];
+    char num[12];
+    oracle_cn_num(L->num, num, sizeof(num));
+    char title[40];
+    snprintf(title, sizeof(title), "AI 庙 · 第%s签", num);
+    uint8_t g = L->grade;
+    if (g > 5) g = 3;
+    if (!sOracle) {
+        ui_toast(kOracleGrade[g]);
+        Serial.printf("[ORACLE] %s %s\n", title, kOracleGrade[g]);
+        return;
+    }
+    if (sOracleNo) lv_label_set_text(sOracleNo, title);
+    if (sOracleGrade) {
+        lv_label_set_text(sOracleGrade, kOracleGrade[g]);
+        lv_obj_set_style_text_color(sOracleGrade, lv_color_hex(kOracleGradeCol[g]), 0);
+    }
+    if (sOracleVerse) lv_label_set_text(sOracleVerse, L->verse);
+    sSwipeX = -1;
+    sSwipeY = -1;
+    sSwipeAbs = 0;
+    sDragMax = 0;
+    lv_obj_add_flag(sOracle, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(sOracle, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(sOracle);
+    beep_request(BEEP_WOOD);
+    Serial.printf("[ORACLE] %s %s\n", title, kOracleGrade[g]);
+}
+
 static void pack_reset() {
     sPackTokens = 0;
     sPackPending = 0;
@@ -454,7 +668,7 @@ static void pack_tick() {
 }
 
 static void on_pack_click(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    if (!is_tap(lv_event_get_code(e))) return;
     if (sPackDidReset) {
         sPackDidReset = false;
         return;
@@ -467,6 +681,10 @@ static int clamp100(int v) {
     if (v < 0) return 0;
     if (v > 100) return 100;
     return v;
+}
+
+static bool is_tap(lv_event_code_t code) {
+    return code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_CLICKED;
 }
 
 static int bigger(int a, int b) { return a > b ? a : b; }
@@ -525,7 +743,7 @@ static void fmt_reset(uint32_t sec, char *out, size_t cap) {
 
 static void fmt_cd(uint32_t sec, char *out, size_t cap) {
     if (!sec) {
-        snprintf(out, cap, "--");
+        snprintf(out, cap, "--:--");
         return;
     }
     if (sec > 10u * 86400u) sec = 10u * 86400u;
@@ -533,10 +751,8 @@ static void fmt_cd(uint32_t sec, char *out, size_t cap) {
     unsigned h = (sec % 86400) / 3600;
     unsigned m = (sec % 3600) / 60;
     unsigned s = sec % 60;
-    if (d) snprintf(out, cap, "%ud %uh", d, h);
-    else if (h) snprintf(out, cap, "%uh %02um", h, m);
-    else if (m) snprintf(out, cap, "%um %02us", m, s);
-    else snprintf(out, cap, "%us", s);
+    if (d) snprintf(out, cap, "%ud %02u:%02u", d, h, m);
+    else snprintf(out, cap, "%u:%02u:%02u", h, m, s);
 }
 
 static void fmt_tok(int n, char *out, size_t cap) {
@@ -690,59 +906,215 @@ static void brand_sync_live() {
     }
 }
 
-static void open_pack_egg() {
+static void open_settings(int from_page) {
     if (ui_nav_blocked()) return;
-    sPackFromUsage = true;
+    sSettingsFrom = from_page;
+    sPage = PAGE_SETTINGS;
+    show_current();
+}
+
+static void close_settings() {
+    sPage = sSettingsFrom;
+    if (sPage != PAGE_DESK && sPage != PAGE_USAGE) sPage = PAGE_DESK;
+    show_current();
+}
+
+static void on_settings_back(lv_event_t *e) {
+    if (!is_tap(lv_event_get_code(e))) return;
+    if (sSwipeAbs > 28) return;
+    close_settings();
+}
+
+static void on_wall_pick(lv_event_t *e) {
+    if (!is_tap(lv_event_get_code(e))) return;
+    if (sSwipeAbs > 28) return;
+    int idx = (int)(intptr_t)lv_event_get_user_data(e);
+    if (idx < 0 || idx >= WALL_COUNT) return;
+    ui_apply_wallpaper((uint8_t)idx);
+    beep_click();
+}
+
+static void on_set_vol(lv_event_t *e) {
+    if (!is_tap(lv_event_get_code(e))) return;
+    if (gCfg.beep_vol == 0) gCfg.beep_vol = 30;
+    else if (gCfg.beep_vol <= 30) gCfg.beep_vol = 60;
+    else if (gCfg.beep_vol <= 60) gCfg.beep_vol = 100;
+    else gCfg.beep_vol = 0;
+    config_save();
+    settings_paint();
+    beep_click();
+}
+
+static lv_obj_t *make_set_row(lv_obj_t *parent, int y, const char *lab, lv_event_cb_t cb) {
+    lv_obj_t *row = make_hit(parent, 220, 36, C_GLASS, cb);
+    lv_obj_set_style_radius(row, 10, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(row, LV_OPA_20, LV_PART_MAIN);
+    lv_obj_set_style_border_width(row, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(row, C_GLASS, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(row, LV_OPA_40, LV_PART_MAIN);
+    lv_obj_set_pos(row, 10, y);
+    lv_obj_t *l = make_label(row, &font_idle_12, C_MUTE);
+    lv_label_set_text(l, lab);
+    lv_obj_align(l, LV_ALIGN_LEFT_MID, 6, 0);
+    lv_obj_t *v = make_label(row, &lv_font_montserrat_12, C_GOLD);
+    lv_label_set_text(v, "");
+    lv_obj_align(v, LV_ALIGN_RIGHT_MID, -6, 0);
+    lv_obj_clear_flag(v, LV_OBJ_FLAG_CLICKABLE);
+    return v;
+}
+
+static void make_settings(lv_obj_t *scr) {
+    sSetBack = make_hit(scr, 48, 48, C_BG, on_settings_back);
+    lv_obj_set_style_bg_opa(sSetBack, LV_OPA_TRANSP, 0);
+    lv_obj_set_pos(sSetBack, 2, 2);
+    lv_obj_t *bl = lv_label_create(sSetBack);
+    lv_label_set_text(bl, LV_SYMBOL_LEFT);
+    lv_obj_set_style_text_font(bl, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(bl, C_GOLD, 0);
+    lv_obj_center(bl);
+
+    lv_obj_t *title = make_label(scr, &font_idle_12, C_INK);
+    lv_label_set_text(title, "设置");
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 14);
+
+    sSetPanel = lv_obj_create(scr);
+    lv_obj_remove_style_all(sSetPanel);
+    lv_obj_set_size(sSetPanel, 240, 196);
+    lv_obj_set_pos(sSetPanel, 0, 44);
+    lv_obj_clear_flag(sSetPanel, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(sSetPanel, LV_OBJ_FLAG_CLICKABLE);
+
+    for (int i = 0; i < 6; i++) {
+        int col = i % 3, row = i / 3;
+        int tx = 6 + col * 78;
+        int ty = row * 52;
+        sWallThumb[i] = make_hit(sSetPanel, 74, 46, C_WELL, on_wall_pick, (void *)(intptr_t)i);
+        lv_obj_set_style_bg_opa(sWallThumb[i], LV_OPA_60, LV_PART_MAIN);
+        lv_obj_set_style_radius(sWallThumb[i], 8, LV_PART_MAIN);
+        lv_obj_set_style_border_width(sWallThumb[i], 2, LV_PART_MAIN);
+        lv_obj_set_style_border_color(sWallThumb[i], C_GLASS, LV_PART_MAIN);
+        lv_obj_set_pos(sWallThumb[i], tx, ty);
+        lv_obj_t *im = lv_img_create(sWallThumb[i]);
+        lv_img_set_src(im, wall_img_get((uint8_t)i));
+        lv_img_set_zoom(im, 88);
+        lv_obj_align(im, LV_ALIGN_TOP_MID, 0, 2);
+        lv_obj_clear_flag(im, LV_OBJ_FLAG_CLICKABLE);
+        sWallName[i] = make_label(sWallThumb[i], &lv_font_montserrat_12, C_MUTE);
+        lv_label_set_text(sWallName[i], kWallNames[i]);
+        lv_obj_align(sWallName[i], LV_ALIGN_BOTTOM_MID, 0, -2);
+        lv_obj_clear_flag(sWallName[i], LV_OBJ_FLAG_CLICKABLE);
+    }
+
+    sSetValVol = make_set_row(sSetPanel, 108, "音量", on_set_vol);
+    sSetValPc = make_set_row(sSetPanel, 150, "电脑", nullptr);
+    if (sSetValPc) {
+        lv_obj_t *pcRow = lv_obj_get_parent(sSetValPc);
+        if (pcRow) lv_obj_clear_flag(pcRow, LV_OBJ_FLAG_CLICKABLE);
+    }
+}
+
+static void settings_paint() {
+    sChromeDark = (gCfg.wall_id == 2);
+    for (int i = 0; i < 6; i++) {
+        if (!sWallThumb[i]) continue;
+        bool on = ((uint8_t)i == gCfg.wall_id);
+        if (on) {
+            lv_obj_set_style_border_color(sWallThumb[i], C_GOLD, LV_PART_MAIN);
+            lv_obj_set_style_border_opa(sWallThumb[i], LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(sWallThumb[i], LV_OPA_80, LV_PART_MAIN);
+        } else {
+            lv_obj_set_style_border_color(sWallThumb[i], C_GLASS, LV_PART_MAIN);
+            lv_obj_set_style_border_opa(sWallThumb[i], LV_OPA_50, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(sWallThumb[i], LV_OPA_60, LV_PART_MAIN);
+        }
+        if (sWallName[i]) {
+            lv_obj_set_style_text_color(sWallName[i], on ? C_GOLD : C_MUTE, 0);
+        }
+    }
+    if (sSetValVol) {
+        if (gCfg.beep_vol == 0) lv_label_set_text(sSetValVol, "OFF");
+        else {
+            char b[8];
+            snprintf(b, sizeof(b), "%u%%", (unsigned)gCfg.beep_vol);
+            lv_label_set_text(sSetValVol, b);
+        }
+    }
+    if (sSetValPc) {
+        if (gStatus.host_ok) lv_label_set_text(sSetValPc, gStatus.wifi_ok ? "OK" : "USB");
+        else lv_label_set_text(sSetValPc, "--");
+    }
+}
+
+static void open_pack_egg(int from_page) {
+    if (ui_nav_blocked()) return;
+    oracle_hide();
+    sPackReturnPage = from_page;
     sPage = PAGE_PACK;
     show_current();
-    ui_toast("EGG");
+    ui_toast("TOKEN");
 }
 
 static void on_sync(lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_PRESSED) {
-        sSyncDownAt = millis();
-        return;
-    }
-    if (code == LV_EVENT_PRESS_LOST || code == LV_EVENT_RELEASED) {
-        uint32_t held = sSyncDownAt ? (millis() - sSyncDownAt) : 0;
-        sSyncDownAt = 0;
-        if (held >= 1200) {
-            open_pack_egg();
-            return;
-        }
-        if (code == LV_EVENT_RELEASED && held > 40 && held < 1200) {
-            ui_toast("SYNC");
-            net_poll_now(true);
-        }
-        return;
-    }
-    if (code == LV_EVENT_LONG_PRESSED) {
-        sSyncDownAt = 0;
-        open_pack_egg();
-    }
+    /* Amber ↻ only — egg is square STOP long-press / USAGE title ×5. */
+    if (!is_tap(lv_event_get_code(e))) return;
+    ui_toast("SYNC");
+    net_poll_now(true);
 }
 
 static void on_usage_title(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    if (!is_tap(lv_event_get_code(e))) return;
     uint32_t now = millis();
     if (now - sUsageTitleTapAt > 900) sUsageTitleTaps = 0;
     sUsageTitleTapAt = now;
     sUsageTitleTaps++;
     if (sUsageTitleTaps >= 5) {
         sUsageTitleTaps = 0;
-        open_pack_egg();
+        open_pack_egg(PAGE_USAGE);
     }
 }
 
+static uint32_t sTalkActAt = 0;
+
+static bool font_can_draw(const lv_font_t *font, const char *s) {
+    if (!font || !s || !s[0]) return false;
+    uint32_t i = 0;
+    while (s[i]) {
+        uint32_t c = _lv_txt_encoded_next(s, &i);
+        if (c < 0x20) continue;
+        lv_font_glyph_dsc_t g;
+        if (!lv_font_get_glyph_dsc(font, &g, c, 0)) return false;
+    }
+    return true;
+}
+
+static bool talk_act_ok() {
+    uint32_t now = millis();
+    if (now - sTalkActAt < 350) return false;
+    sTalkActAt = now;
+    return true;
+}
+
+static void rec_send() {
+    if (!voice_is_recording()) return;
+    if (!talk_act_ok()) return;
+    voice_stop_and_send();
+    beep_click();
+    ui_toast("SEND");
+}
+
 static void on_talk(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    lv_event_code_t code = lv_event_get_code(e);
+    /* CST816 often skips SHORT_CLICKED on the second tap; RELEASED still arrives. */
+    if (code == LV_EVENT_RELEASED) {
+        if (voice_is_recording() && voice_source() == VOICE_SRC_TAP && sDragMax < 40) rec_send();
+        return;
+    }
+    if (!is_tap(code)) return;
     Serial.println("[UI] talk click");
     if (voice_is_recording()) {
-        voice_stop_and_send();
-        beep_click();
-        ui_toast("SEND");
+        rec_send();
     } else if (!voice_is_busy()) {
+        if (!talk_act_ok()) return;
         /* Stay on current page — global REC chrome handles feedback. */
         voice_start(VOICE_SRC_TAP);
         beep_click();
@@ -751,7 +1123,24 @@ static void on_talk(lv_event_t *e) {
 }
 
 static void on_boot_key(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_PRESSED) {
+        sBootDownAt = millis();
+        sBootEggFired = false;
+        return;
+    }
+    if (code == LV_EVENT_LONG_PRESSED) {
+        if (!voice_is_recording()) {
+            sBootEggFired = true;
+            open_settings(PAGE_DESK);
+        }
+        return;
+    }
+    if (!is_tap(code)) return;
+    if (sBootEggFired) {
+        sBootEggFired = false;
+        return;
+    }
     if (voice_is_recording()) return;
     beep_click();
     strncpy(gStatus.agent_state, "working", sizeof(gStatus.agent_state) - 1);
@@ -759,8 +1148,9 @@ static void on_boot_key(lv_event_t *e) {
     ui_toast("ENTER");
 }
 
-static void on_stop(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+static void on_cancel_key(lv_event_t *e) {
+    /* Top「取消」: abort recording, never send. */
+    if (!is_tap(lv_event_get_code(e))) return;
     if (voice_is_recording()) {
         voice_cancel();
         beep_click();
@@ -773,8 +1163,55 @@ static void on_stop(lv_event_t *e) {
     ui_toast("STOP");
 }
 
+static void on_end_rec(lv_event_t *e) {
+    /* Round square STOP: end recording and send. Not cancel. */
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_PRESSED) {
+        sStopDownAt = millis();
+        sStopEggFired = false;
+        return;
+    }
+    if (code == LV_EVENT_LONG_PRESSED) {
+        if (!voice_is_recording()) {
+            sStopEggFired = true;
+            open_pack_egg(PAGE_DESK);
+        }
+        return;
+    }
+    if (code == LV_EVENT_RELEASED) {
+        if (sStopEggFired) return;
+        if (voice_is_recording() && sDragMax < 40) rec_send();
+        return;
+    }
+    if (!is_tap(code)) return;
+    if (sStopEggFired) {
+        sStopEggFired = false;
+        return;
+    }
+    uint32_t held = sStopDownAt ? (millis() - sStopDownAt) : 0;
+    sStopDownAt = 0;
+    if (!voice_is_recording() && held >= 1200) {
+        open_pack_egg(PAGE_DESK);
+        return;
+    }
+    if (voice_is_recording()) {
+        rec_send();
+        return;
+    }
+    beep_click();
+    hid_tap_esc();
+    strncpy(gStatus.agent_state, "idle", sizeof(gStatus.agent_state) - 1);
+    ui_toast("STOP");
+}
+
+static void wire_end_egg(lv_obj_t *obj) {
+    if (!obj) return;
+    lv_obj_add_event_cb(obj, on_end_rec, LV_EVENT_PRESSED, nullptr);
+    lv_obj_add_event_cb(obj, on_end_rec, LV_EVENT_LONG_PRESSED, nullptr);
+}
+
 static void on_plan_back(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    if (!is_tap(lv_event_get_code(e))) return;
     sPage = PAGE_USAGE;
     sPlanIdx = -1;
     show_current();
@@ -787,8 +1224,10 @@ static void on_idle_click(lv_event_t *e) {
 }
 
 static void on_cell(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    if (sSwipeAbs > 28) return;
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code != LV_EVENT_SHORT_CLICKED && code != LV_EVENT_CLICKED) return;
+    /* Swipe-to-flip starts on these tiles; CST816 also injects a tap on lift. */
+    if (tap_was_swipe()) return;
     int slot = (int)(intptr_t)lv_event_get_user_data(e);
     int idx = active_at(sUsagePage * 4 + slot);
     if (idx < 0) return;
@@ -798,13 +1237,49 @@ static void on_cell(lv_event_t *e) {
 }
 
 static void on_pager_prev(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    if (!is_tap(lv_event_get_code(e))) return;
     ui_prev_page();
 }
 
 static void on_pager_next(lv_event_t *e) {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    if (!is_tap(lv_event_get_code(e))) return;
     ui_next_page();
+}
+
+/* Bottom nav: 32px was ~5mm on this 1.54" — too thin for a finger. */
+enum { UI_DOCK_H = 64, UI_DOCK_BTN_W = 80, UI_CELL_H = 60, UI_TILE_H = 40 };
+
+static void make_dock_arrow(lv_obj_t *dock, bool prev) {
+    lv_obj_t *b = make_hit(dock, UI_DOCK_BTN_W, UI_DOCK_H, C_BG,
+                           prev ? on_pager_prev : on_pager_next);
+    lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, 0);
+    lv_obj_set_ext_click_area(b, 0);
+    lv_obj_align(b, prev ? LV_ALIGN_LEFT_MID : LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_t *lab = lv_label_create(b);
+    lv_obj_clear_flag(lab, LV_OBJ_FLAG_CLICKABLE);
+    lv_label_set_text(lab, prev ? "<" : ">");
+    lv_obj_set_style_text_font(lab, &lv_font_montserrat_28, 0);
+    lv_obj_set_style_text_color(lab, C_GOLD, 0);
+    lv_obj_center(lab);
+}
+
+static lv_obj_t *make_bottom_dock(lv_obj_t *scr) {
+    lv_obj_t *dock = lv_obj_create(scr);
+    lv_obj_remove_style_all(dock);
+    lv_obj_set_size(dock, 240, UI_DOCK_H);
+    lv_obj_align(dock, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(dock, lv_color_hex(0x06080E), 0);
+    lv_obj_set_style_bg_opa(dock, LV_OPA_40, 0);
+    lv_obj_set_style_border_width(dock, 1, 0);
+    lv_obj_set_style_border_side(dock, LV_BORDER_SIDE_TOP, 0);
+    lv_obj_set_style_border_color(dock, C_GLASS, 0);
+    lv_obj_set_style_border_opa(dock, LV_OPA_30, 0);
+    lv_obj_clear_flag(dock, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(dock, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(dock, LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
+    make_dock_arrow(dock, true);
+    make_dock_arrow(dock, false);
+    return dock;
 }
 
 static void quota_chime() {
@@ -840,13 +1315,18 @@ static void wake_idle() {
     sActAt = millis();
     if (sPage != PAGE_IDLE) return;
     sPage = PAGE_DESK;
-    display_swallow_until_release();
+    display_clear_touch_swallow();
+    display_apply_presence();
     show_current();
     ui_refresh_from_status();
 }
 
 void ui_note_activity() {
     sActAt = millis();
+    if (gStatus.screen_off) {
+        display_user_wake();
+        lv_obj_invalidate(lv_scr_act());
+    }
     if (sPage == PAGE_IDLE) wake_idle();
 }
 
@@ -856,7 +1336,9 @@ static void bubble_tree(lv_obj_t *obj) {
         lv_obj_t *c = lv_obj_get_child(obj, i);
         lv_obj_clear_flag(c, LV_OBJ_FLAG_SCROLLABLE);
         if (lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) {
-            lv_obj_clear_flag(c, LV_OBJ_FLAG_EVENT_BUBBLE);
+            /* Keep bubble so swipes starting on buttons reach the screen. */
+            lv_obj_add_flag(c, LV_OBJ_FLAG_EVENT_BUBBLE);
+            lv_obj_add_flag(c, LV_OBJ_FLAG_GESTURE_BUBBLE);
             /* Labels/icons inside hit targets stay clickable by default in
                LVGL and steal taps (no handler) — e.g. mic glyph centered on
                the talk button. Force them to pass through to the parent. */
@@ -869,6 +1351,7 @@ static void bubble_tree(lv_obj_t *obj) {
             continue;
         }
         lv_obj_add_flag(c, LV_OBJ_FLAG_EVENT_BUBBLE);
+        lv_obj_add_flag(c, LV_OBJ_FLAG_GESTURE_BUBBLE);
         bubble_tree(c);
     }
 }
@@ -878,27 +1361,32 @@ static void on_swipe(lv_event_t *e) {
     if (!indev) return;
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_GESTURE) {
-        if (ui_nav_blocked()) return;
+        if (voice_is_recording()) return;
         lv_dir_t dir = lv_indev_get_gesture_dir(indev);
         if (sPage == PAGE_IDLE) {
             wake_idle();
-            lv_indev_wait_release(indev);
             return;
         }
         if (sPage == PAGE_PLAN) {
             sPage = PAGE_USAGE;
             show_current();
-            lv_indev_wait_release(indev);
+            return;
+        }
+        if (sPage == PAGE_SETTINGS) {
+            close_settings();
             return;
         }
         if (dir == LV_DIR_LEFT) ui_next_page();
         else if (dir == LV_DIR_RIGHT) ui_prev_page();
-        lv_indev_wait_release(indev);
         sSwipeX = -1;
         return;
     }
     lv_point_t p;
     lv_indev_get_point(indev, &p);
+    if (code == LV_EVENT_PRESSING) {
+        swipe_track_point(p);
+        return;
+    }
     if (code == LV_EVENT_PRESSED) {
         sIdlePress = (sPage == PAGE_IDLE);
         if (sIdlePress) wake_idle();
@@ -906,17 +1394,20 @@ static void on_swipe(lv_event_t *e) {
         sSwipeX = p.x;
         sSwipeY = p.y;
         sSwipeAbs = 0;
+        sDragMax = 0;
         if (sPage == PAGE_PACK) {
             sPackHold = millis();
             sPackDidReset = false;
         }
     }
     if (code == LV_EVENT_RELEASED && sSwipeX >= 0) {
+        swipe_track_point(p);
         int dx = p.x - sSwipeX;
         int dy = p.y - sSwipeY;
         int adx = dx < 0 ? -dx : dx;
         int ady = dy < 0 ? -dy : dy;
-        sSwipeAbs = adx > ady ? adx : ady;
+        if (sDragMax > sSwipeAbs) sSwipeAbs = sDragMax;
+        if (sSwipeAbs > 14) tap_lock();
         uint32_t held = sPackHold ? (millis() - sPackHold) : 0;
         sSwipeX = -1;
         sSwipeY = -1;
@@ -925,7 +1416,7 @@ static void on_swipe(lv_event_t *e) {
             sPackHold = 0;
             return;
         }
-        if (ui_nav_blocked()) {
+        if (voice_is_recording()) {
             sPackHold = 0;
             return;
         }
@@ -961,58 +1452,68 @@ static void on_swipe(lv_event_t *e) {
 }
 
 static void cell_geom(int n, int i, int *x, int *y, int *s) {
-    /* 3-up uses the same 2x2 grid as 4-up (zoom 256). The old triangle used 60px
-       marks (zoom 274); dense alpha frames like Coze blanked that page. */
-    if (n == 3) n = 4;
-    static const int mark_s[] = {0, 92, 72, 60, 56};
-    *s = mark_s[n];
-    if (n == 1) {
-        *x = 74;
-        *y = 70;
-    } else if (n == 2) {
-        *x = 34 + i * 100;
-        *y = 80;
-    } else {
-        *x = 36 + (i % 2) * 114;
-        *y = 56 + (i / 2) * 74;
-    }
+    (void)n;
+    *s = 104;
+    *x = 10 + (i % 2) * 112;
+    *y = 44 + (i / 2) * 64;
 }
 
-static void paint_logo_fill(lv_obj_t *mark, lv_obj_t *gray, lv_obj_t *clip, lv_obj_t *color,
-                           int idx, int box, int remain, bool live) {
-    lv_obj_clear_flag(mark, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
-    lv_obj_clear_flag(clip, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
-    lv_obj_set_size(mark, box, box);
-    uint16_t zoom = (uint16_t)(box * 256 / LOGO_SIZE);
-    if (zoom < 1) zoom = 1;
+static void paint_liquid_tile(lv_obj_t *mark, lv_obj_t *fill, lv_obj_t *name_lab,
+                              lv_obj_t *pct_lab, int idx, int box_w, int box_h,
+                              int remain, bool live) {
+    lv_obj_set_size(mark, box_w, box_h);
+    lv_obj_set_style_radius(mark, 14, 0);
+    lv_obj_set_style_clip_corner(mark, true, 0);
+    lv_obj_set_style_bg_color(mark, lv_color_hex(0x081018), 0);
+    lv_obj_set_style_bg_opa(mark, LV_OPA_70, 0);
+    lv_obj_set_style_border_width(mark, 1, 0);
+    lv_obj_set_style_border_color(mark, C_GLASS, 0);
+    lv_obj_set_style_border_opa(mark, LV_OPA_50, 0);
+
     int vis = live ? clamp100(remain) : 0;
-    int clip_h = vis <= 0 ? 0 : (box * vis + 99) / 100;
-    if (vis > 0 && clip_h < 2) clip_h = 2;
+    int fill_h = vis <= 0 ? 0 : (box_h * vis + 99) / 100;
+    if (vis > 0 && fill_h < 4) fill_h = 4;
 
-    lv_img_set_src(gray, &logo_img[idx]);
-    lv_img_set_src(color, &logo_img[idx]);
-    lv_img_set_zoom(gray, zoom);
-    lv_img_set_zoom(color, zoom);
-    lv_img_set_pivot(gray, 0, 0);
-    lv_img_set_pivot(color, 0, 0);
-    lv_img_set_antialias(gray, true);
-    lv_img_set_antialias(color, true);
-    lv_obj_set_size(gray, box, box);
-    lv_obj_set_pos(gray, 0, 0);
-    lv_obj_set_style_img_recolor(gray, C_GRAY, 0);
-    lv_obj_set_style_img_recolor_opa(gray, LV_OPA_COVER, 0);
-
-    if (clip_h <= 0) {
-        lv_obj_add_flag(clip, LV_OBJ_FLAG_HIDDEN);
+    lv_color_t brand = lv_color_hex(kBrands[idx].color);
+    if (fill_h <= 0) {
+        lv_obj_add_flag(fill, LV_OBJ_FLAG_HIDDEN);
     } else {
-        lv_obj_clear_flag(clip, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_set_size(clip, box, clip_h);
-        lv_obj_align(clip, LV_ALIGN_BOTTOM_MID, 0, 0);
-        lv_obj_set_size(color, box, box);
-        lv_obj_set_pos(color, 0, clip_h - box);
-        lv_obj_set_style_img_recolor_opa(color, LV_OPA_TRANSP, 0);
+        lv_obj_clear_flag(fill, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_size(fill, box_w, fill_h);
+        lv_obj_align(fill, LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_set_style_bg_color(fill, brand, 0);
+        lv_obj_set_style_bg_opa(fill, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(fill, 0, 0);
     }
-    lv_obj_invalidate(mark);
+
+    if (live && vis > 0 && vis <= 20) {
+        lv_obj_set_style_border_color(mark, C_HOT, 0);
+        lv_obj_set_style_border_opa(mark, LV_OPA_90, 0);
+    } else {
+        lv_obj_set_style_border_color(mark, C_GLASS, 0);
+        lv_obj_set_style_border_opa(mark, LV_OPA_50, 0);
+    }
+
+    char lab[16];
+    brand_short(idx, lab, sizeof(lab));
+    lv_label_set_text(name_lab, lab);
+    lv_obj_set_style_text_font(name_lab, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(name_lab, C_WHITE, 0);
+    lv_obj_clear_flag(name_lab, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_align(name_lab, LV_ALIGN_TOP_LEFT, 6, 7);
+    lv_obj_move_foreground(name_lab);
+
+    if (!live) lv_label_set_text(pct_lab, "--");
+    else {
+        char p[8];
+        snprintf(p, sizeof(p), "%d", vis);
+        lv_label_set_text(pct_lab, p);
+    }
+    lv_obj_set_style_text_font(pct_lab, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(pct_lab, C_WHITE, 0);
+    lv_obj_clear_flag(pct_lab, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_align(pct_lab, LV_ALIGN_BOTTOM_RIGHT, -6, -4);
+    lv_obj_move_foreground(pct_lab);
 }
 
 static void usage_paint() {
@@ -1026,16 +1527,27 @@ static void usage_paint() {
     if (slice < 0) slice = 0;
 
     if (sPager) {
-        if (total > 1) {
-            lv_obj_clear_flag(sPager, LV_OBJ_FLAG_HIDDEN);
-            if (sPagerNum) {
-                char b[16];
-                snprintf(b, sizeof(b), "%d/%d", sUsagePage + 1, total);
-                lv_label_set_text(sPagerNum, b);
-            }
-        } else {
-            lv_obj_add_flag(sPager, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(sPager, LV_OBJ_FLAG_HIDDEN);
+        if (sPagerNum) {
+            char b[16];
+            int pages = total > 0 ? total : 1;
+            snprintf(b, sizeof(b), "%d/%d", sUsagePage + 1, pages);
+            lv_label_set_text(sPagerNum, b);
         }
+    }
+
+    if (sSyncHit) {
+        lv_obj_t *sl = lv_obj_get_child(sSyncHit, 0);
+        if (sl) {
+            lv_label_set_text(sl, LV_SYMBOL_REFRESH);
+            lv_obj_set_style_text_font(sl, &lv_font_montserrat_14, 0);
+            lv_obj_set_style_text_color(sl, C_GOLD, 0);
+        }
+        lv_obj_set_size(sSyncHit, 40, 40);
+        lv_obj_set_style_bg_opa(sSyncHit, LV_OPA_20, 0);
+        lv_obj_set_style_bg_color(sSyncHit, C_ORANGE, 0);
+        lv_obj_set_style_radius(sSyncHit, 10, 0);
+        lv_obj_align(sSyncHit, LV_ALIGN_TOP_RIGHT, -6, 6);
     }
 
     for (int i = 0; i < 4; i++) {
@@ -1054,18 +1566,28 @@ static void usage_paint() {
         int remain = clamp100(sRemain[idx]);
         lv_obj_clear_flag(sCell[i], LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_pos(sCell[i], x, y);
-        lv_obj_set_size(sCell[i], s, s + 16);
+        lv_obj_set_size(sCell[i], s, UI_CELL_H);
         lv_obj_align(sMark[i], LV_ALIGN_TOP_MID, 0, 0);
-        paint_logo_fill(sMark[i], sGray[i], sClip[i], sColor[i], idx, s, remain, sLive[idx]);
+        if (sGray[i]) lv_obj_add_flag(sGray[i], LV_OBJ_FLAG_HIDDEN);
+        if (sColor[i]) lv_obj_add_flag(sColor[i], LV_OBJ_FLAG_HIDDEN);
+        paint_liquid_tile(sMark[i], sClip[i], sName[i], sPct[i], idx, s, UI_TILE_H, remain, sLive[idx]);
 
         char cd[16];
-        if (!sLive[idx]) snprintf(cd, sizeof(cd), "--");
+        if (!sLive[idx]) snprintf(cd, sizeof(cd), "--:--");
         else fmt_cd(sReset[idx], cd, sizeof(cd));
         lv_label_set_text(sCd[i], cd);
-        lv_color_t cc = C_MUTE;
-        if (sLive[idx] && sReset[idx] && sReset[idx] < 600) cc = C_HOT;
-        else if (sLive[idx] && sReset[idx] && sReset[idx] < 3600) cc = C_GOLD;
+        lv_color_t cc = C_GOLD;
+        if (!sLive[idx] || !sReset[idx]) cc = C_MUTE;
+        else if (remain <= 20 || sReset[idx] < 3600) cc = C_HOT;
         lv_obj_set_style_text_color(sCd[i], cc, 0);
+        lv_obj_set_style_text_font(sCd[i], &lv_font_montserrat_16, 0);
+        lv_obj_set_width(sCd[i], s);
+        lv_obj_set_style_text_align(sCd[i], LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_bg_color(sCd[i], lv_color_hex(0x081018), 0);
+        lv_obj_set_style_bg_opa(sCd[i], LV_OPA_80, 0);
+        lv_obj_set_style_radius(sCd[i], 8, 0);
+        lv_obj_set_style_pad_top(sCd[i], 2, 0);
+        lv_obj_set_style_pad_bottom(sCd[i], 2, 0);
         lv_obj_align(sCd[i], LV_ALIGN_BOTTOM_MID, 0, 0);
     }
 }
@@ -1076,12 +1598,17 @@ static void idle_paint() {
     struct tm *tmp = (now > 1700000000) ? localtime(&now) : nullptr;
     bool ok = tmp != nullptr;
     if (ok) tmv = *tmp;
-    static const char *wk[] = {"日", "一", "二", "三", "四", "五", "六"};
+    /* UTF-8 literals — avoid source-file encoding surprises on Windows toolchains. */
+    static const char *wk[] = {
+        "\xE6\x97\xA5", "\xE4\xB8\x80", "\xE4\xBA\x8C", "\xE4\xB8\x89",
+        "\xE5\x9B\x9B", "\xE4\xBA\x94", "\xE5\x85\xAD",
+    };
     char b[32];
     if (ok) {
         snprintf(b, sizeof(b), "%02d:%02d", tmv.tm_hour, tmv.tm_min);
         lv_label_set_text(sIdleTime, b);
-        snprintf(b, sizeof(b), "%d / %d    周%s", tmv.tm_mon + 1, tmv.tm_mday, wk[tmv.tm_wday]);
+        snprintf(b, sizeof(b), "%d / %d  \xE5\x91\xA8%s",
+                 tmv.tm_mon + 1, tmv.tm_mday, wk[tmv.tm_wday]);
         lv_label_set_text(sIdleDate, b);
     } else {
         lv_label_set_text(sIdleTime, "--:--");
@@ -1105,8 +1632,8 @@ static void plan_paint() {
     char u[32];
     time_t ts = (time_t)gStatus.ts;
     struct tm *tmp = (sLive[sPlanIdx] && ts > 1700000000) ? localtime(&ts) : nullptr;
-    if (tmp) snprintf(u, sizeof(u), "UPD  %02d:%02d", tmp->tm_hour, tmp->tm_min);
-    else snprintf(u, sizeof(u), "UPD  --");
+    if (tmp) snprintf(u, sizeof(u), "TODAY  %02d:%02d", tmp->tm_hour, tmp->tm_min);
+    else snprintf(u, sizeof(u), "TODAY  --");
     lv_label_set_text(sPlanUpd, u);
 
     lv_img_set_src(sPlanGhost, &logo_img[sPlanIdx]);
@@ -1171,7 +1698,7 @@ static void plan_paint() {
         else if (remain >= 0 && remain <= 30) pc = C_GOLD;
         else if (remain >= 0) pc = col;
         lv_obj_set_style_text_color(sPlanPct[i], pc, 0);
-        int w = remain < 0 ? 0 : (208 * remain) / 100;
+        int w = remain < 0 ? 0 : (212 * remain) / 100;
         lv_obj_set_width(sPlanFill[i], w);
         lv_obj_set_style_bg_color(sPlanFill[i], remain < 0 ? C_MUTE : col, 0);
     }
@@ -1191,9 +1718,12 @@ static void plan_paint() {
         char tok[12];
         fmt_tok(sTokens[sPlanIdx], tok, sizeof(tok));
         snprintf(foot, sizeof(foot), "TODAY  %s  TOK", tok);
+    } else {
+        snprintf(foot, sizeof(foot), "swipe back");
     }
     lv_label_set_text(sPlanFoot, foot);
-    lv_obj_set_style_text_color(sPlanFoot, C_MUTE, 0);
+    lv_obj_set_style_text_color(sPlanFoot,
+        (sLive[sPlanIdx] && sReset[sPlanIdx]) ? C_GOLD : C_MUTE, 0);
 }
 
 static void show_current() {
@@ -1206,146 +1736,165 @@ static void show_current() {
     if (sPage == PAGE_USAGE) usage_paint();
     if (sPage == PAGE_IDLE) idle_paint();
     if (sPage == PAGE_PLAN) plan_paint();
+    if (sPage == PAGE_SETTINGS) settings_paint();
 }
 
 static void make_desk(lv_obj_t *scr) {
-    make_rect(scr, 4, 240, C_COPPER);
     sDeskBar = make_rect(scr, 240, 4, C_HOT);
     lv_obj_add_flag(sDeskBar, LV_OBJ_FLAG_HIDDEN);
 
-    /* Caps L→R facing screen: 发送 | 取消 | 讲话. */
-    static const int kx[3] = {0, 85, 170};
+    static const int kx[3] = {8, 85, 162};
     static const char *ka[3] = {"发送", "取消", "讲话"};
-    lv_event_cb_t kcb[3] = {on_boot_key, on_stop, on_talk};
+    lv_event_cb_t kcb[3] = {on_boot_key, on_cancel_key, on_talk};
     for (int i = 0; i < 3; i++) {
-        sKey[i] = make_hit(scr, 70, 36, C_ORANGE, kcb[i]);
+        sKey[i] = make_hit(scr, 70, 34, C_WELL, kcb[i]);
         lv_obj_set_style_radius(sKey[i], 10, LV_PART_MAIN);
         lv_obj_set_style_clip_corner(sKey[i], true, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(sKey[i], LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(sKey[i], i == 2 ? C_ORANGE : lv_color_hex(0x12161E), LV_PART_MAIN);
+        lv_obj_set_style_border_width(sKey[i], 1, LV_PART_MAIN);
+        lv_obj_set_style_border_color(sKey[i], i == 2 ? C_ORANGE : C_GOLD, LV_PART_MAIN);
+        lv_obj_set_style_border_opa(sKey[i], LV_OPA_80, LV_PART_MAIN);
         lv_obj_set_pos(sKey[i], kx[i], 8);
         sKeyAct[i] = lv_label_create(sKey[i]);
         lv_obj_clear_flag(sKeyAct[i], LV_OBJ_FLAG_CLICKABLE);
         lv_label_set_text(sKeyAct[i], ka[i]);
         lv_obj_set_style_text_font(sKeyAct[i], &font_idle_16, 0);
-        lv_obj_set_style_text_color(sKeyAct[i], C_WHITE, 0);
+        lv_obj_set_style_text_color(sKeyAct[i], i == 2 ? lv_color_hex(0x1A140C) : C_GOLD, 0);
         lv_obj_center(sKeyAct[i]);
     }
+    lv_obj_add_event_cb(sKey[0], on_boot_key, LV_EVENT_PRESSED, nullptr);
+    lv_obj_add_event_cb(sKey[0], on_boot_key, LV_EVENT_LONG_PRESSED, nullptr);
+    lv_obj_add_event_cb(sKey[2], on_talk, LV_EVENT_RELEASED, nullptr);
 
-    /* Rec timer — only visible while recording. */
-    sLine = make_label(scr, &lv_font_montserrat_28, C_INK);
+    sLineBg = make_rect(scr, 228, 36, lv_color_hex(0x081018));
+    lv_obj_set_style_bg_opa(sLineBg, LV_OPA_90, 0);
+    lv_obj_set_style_radius(sLineBg, 10, 0);
+    lv_obj_set_style_border_width(sLineBg, 1, 0);
+    lv_obj_set_style_border_color(sLineBg, C_GLASS, 0);
+    lv_obj_set_style_border_opa(sLineBg, LV_OPA_50, 0);
+    lv_obj_align(sLineBg, LV_ALIGN_TOP_MID, 0, 42);
+    lv_obj_clear_flag(sLineBg, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(sLineBg, LV_OBJ_FLAG_HIDDEN);
+
+    sLine = make_label(scr, &font_idle_16, C_WHITE);
     lv_label_set_text(sLine, "");
-    lv_obj_set_width(sLine, 200);
+    lv_label_set_long_mode(sLine, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(sLine, 220);
     lv_obj_set_style_text_align(sLine, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(sLine, LV_ALIGN_TOP_MID, 0, 58);
+    lv_obj_align(sLine, LV_ALIGN_TOP_MID, 0, 46);
     lv_obj_add_flag(sLine, LV_OBJ_FLAG_HIDDEN);
 
-    /* Soft pulse halo behind mic (shown while recording). */
-    sTalkHalo = make_rect(scr, 116, 116, C_ORANGE);
-    lv_obj_set_style_radius(sTalkHalo, 58, 0);
+    const int talk_x = 16;
+    const int stop_x = 136;
+    const int btn_y = 80;
+    const int btn_s = 88;
+
+    sTalkHalo = make_rect(scr, 104, 104, C_TALK);
+    lv_obj_set_style_radius(sTalkHalo, 52, 0);
     lv_obj_set_style_bg_opa(sTalkHalo, LV_OPA_30, 0);
-    lv_obj_set_pos(sTalkHalo, 18, 108);
+    lv_obj_set_pos(sTalkHalo, talk_x - 8, btn_y - 8);
+    lv_obj_clear_flag(sTalkHalo, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(sTalkHalo, LV_OBJ_FLAG_HIDDEN);
 
-    sTalkBtn = make_hit(scr, 100, 100, C_ORANGE, on_talk);
-    lv_obj_set_style_radius(sTalkBtn, 50, LV_PART_MAIN);
+    sTalkBtn = make_hit(scr, btn_s, btn_s, lv_color_hex(0x12161E), on_talk);
+    lv_obj_add_event_cb(sTalkBtn, on_talk, LV_EVENT_RELEASED, nullptr);
+    lv_obj_set_style_radius(sTalkBtn, 44, LV_PART_MAIN);
     lv_obj_set_style_clip_corner(sTalkBtn, true, LV_PART_MAIN);
-    lv_obj_set_pos(sTalkBtn, 26, 116);
+    lv_obj_set_style_bg_opa(sTalkBtn, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(sTalkBtn, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(sTalkBtn, C_GOLD, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(sTalkBtn, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_pos(sTalkBtn, talk_x, btn_y);
     sTalkLab = lv_label_create(sTalkBtn);
     lv_obj_clear_flag(sTalkLab, LV_OBJ_FLAG_CLICKABLE);
     lv_label_set_text(sTalkLab, ICON_MIC);
     lv_obj_set_style_text_font(sTalkLab, &font_icons, 0);
-    lv_obj_set_style_text_color(sTalkLab, C_WHITE, 0);
+    lv_obj_set_style_text_color(sTalkLab, C_GOLD, 0);
     lv_obj_center(sTalkLab);
 
-    sStopBtn = make_hit(scr, 100, 100, C_WELL, on_stop);
-    lv_obj_set_style_radius(sStopBtn, 50, LV_PART_MAIN);
+    sStopBtn = make_hit(scr, btn_s, btn_s, lv_color_hex(0x12161E), on_end_rec);
+    lv_obj_add_event_cb(sStopBtn, on_end_rec, LV_EVENT_RELEASED, nullptr);
+    lv_obj_set_style_radius(sStopBtn, 44, LV_PART_MAIN);
     lv_obj_set_style_clip_corner(sStopBtn, true, LV_PART_MAIN);
-    lv_obj_set_pos(sStopBtn, 134, 116);
+    lv_obj_set_style_bg_opa(sStopBtn, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(sStopBtn, 2, LV_PART_MAIN);
+    lv_obj_set_style_border_color(sStopBtn, C_GOLD, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(sStopBtn, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_pos(sStopBtn, stop_x, btn_y);
+    wire_end_egg(sStopBtn);
     sStopLab = lv_label_create(sStopBtn);
     lv_obj_clear_flag(sStopLab, LV_OBJ_FLAG_CLICKABLE);
-    lv_label_set_text(sStopLab, ICON_BAN);
+    lv_label_set_text(sStopLab, ICON_STOP);
     lv_obj_set_style_text_font(sStopLab, &font_icons, 0);
-    lv_obj_set_style_text_color(sStopLab, C_MUTE, 0);
+    lv_obj_set_style_text_color(sStopLab, C_GOLD, 0);
     lv_obj_center(sStopLab);
 
+    lv_obj_t *dock = make_bottom_dock(scr);
     for (int i = 0; i < 2; i++) {
-        sDots[i] = make_rect(scr, i == 0 ? 12 : 5, 4, i == 0 ? C_COPPER : C_WELL);
+        sDots[i] = make_rect(dock, i == 0 ? 14 : 6, 4, i == 0 ? C_COPPER : C_WELL);
         lv_obj_set_style_radius(sDots[i], 2, 0);
-        lv_obj_align(sDots[i], LV_ALIGN_BOTTOM_MID, (int)((i - 0.5f) * 16), -8);
+        lv_obj_align(sDots[i], LV_ALIGN_CENTER, (int)((i - 0.5f) * 18), 0);
+        lv_obj_clear_flag(sDots[i], LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_move_foreground(sDots[i]);
     }
 }
 
 static void make_usage(lv_obj_t *scr) {
-    make_rect(scr, 4, 240, C_HOT);
     lv_obj_t *k = make_label(scr, &lv_font_montserrat_12, C_MUTE);
-    lv_label_set_text(k, "PLAN");
-    lv_obj_align(k, LV_ALIGN_TOP_LEFT, 18, 12);
-    sUsageTitle = make_hit(scr, 100, 28, C_BG, on_usage_title);
+    lv_label_set_text(k, "REMAIN");
+    lv_obj_align(k, LV_ALIGN_TOP_LEFT, 14, 6);
+    sUsageTitle = make_hit(scr, 110, 32, C_BG, on_usage_title);
     lv_obj_set_style_bg_opa(sUsageTitle, LV_OPA_TRANSP, 0);
-    lv_obj_align(sUsageTitle, LV_ALIGN_TOP_LEFT, 14, 24);
+    lv_obj_align(sUsageTitle, LV_ALIGN_TOP_LEFT, 10, 16);
     lv_obj_t *t = lv_label_create(sUsageTitle);
     lv_label_set_text(t, "USAGE");
     lv_obj_set_style_text_font(t, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(t, C_INK, 0);
     lv_obj_align(t, LV_ALIGN_LEFT_MID, 4, 0);
 
-    sSyncHit = make_hit(scr, 56, 28, C_BG, nullptr);
-    lv_obj_align(sSyncHit, LV_ALIGN_TOP_RIGHT, -10, 18);
-    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_PRESSED, nullptr);
-    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_RELEASED, nullptr);
-    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_PRESS_LOST, nullptr);
-    lv_obj_add_event_cb(sSyncHit, on_sync, LV_EVENT_LONG_PRESSED, nullptr);
+    sSyncHit = make_hit(scr, 40, 40, C_ORANGE, on_sync);
+    lv_obj_set_style_bg_opa(sSyncHit, LV_OPA_20, 0);
+    lv_obj_set_style_radius(sSyncHit, 10, 0);
+    lv_obj_align(sSyncHit, LV_ALIGN_TOP_RIGHT, -6, 6);
     lv_obj_t *sl = lv_label_create(sSyncHit);
-    lv_label_set_text(sl, "SYNC");
-    lv_obj_set_style_text_font(sl, &lv_font_montserrat_12, 0);
-    lv_obj_set_style_text_color(sl, C_MUTE, 0);
+    lv_label_set_text(sl, LV_SYMBOL_REFRESH);
+    lv_obj_set_style_text_font(sl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(sl, C_GOLD, 0);
     lv_obj_center(sl);
 
     for (int i = 0; i < 4; i++) {
-        sCell[i] = make_hit(scr, 56, 72, C_BG, nullptr);
-        lv_obj_add_event_cb(sCell[i], on_cell, LV_EVENT_CLICKED, (void *)(intptr_t)i);
+        sCell[i] = make_hit(scr, 104, UI_CELL_H, C_BG, nullptr);
+        lv_obj_add_event_cb(sCell[i], on_cell, LV_EVENT_SHORT_CLICKED, (void *)(intptr_t)i);
+        lv_obj_set_ext_click_area(sCell[i], 0);
         lv_obj_set_style_bg_opa(sCell[i], LV_OPA_TRANSP, 0);
-        sMark[i] = make_rect(sCell[i], 56, 56, C_BG);
-        lv_obj_set_style_bg_opa(sMark[i], LV_OPA_TRANSP, 0);
+        sMark[i] = make_rect(sCell[i], 104, UI_TILE_H, lv_color_hex(0x081018));
+        lv_obj_set_style_radius(sMark[i], 14, 0);
+        lv_obj_set_style_clip_corner(sMark[i], true, 0);
         sGray[i] = lv_img_create(sMark[i]);
+        lv_obj_add_flag(sGray[i], LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(sGray[i], LV_OBJ_FLAG_CLICKABLE);
-        sClip[i] = make_rect(sMark[i], 56, 56, C_BG);
-        lv_obj_set_style_bg_opa(sClip[i], LV_OPA_TRANSP, 0);
+        sClip[i] = make_rect(sMark[i], 104, 30, C_TALK);
         lv_obj_clear_flag(sClip[i], LV_OBJ_FLAG_CLICKABLE);
         sColor[i] = lv_img_create(sClip[i]);
+        lv_obj_add_flag(sColor[i], LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(sColor[i], LV_OBJ_FLAG_CLICKABLE);
-        sCd[i] = make_label(sCell[i], &lv_font_montserrat_12, C_MUTE);
+        sName[i] = make_label(sMark[i], &lv_font_montserrat_14, C_WHITE);
+        lv_label_set_text(sName[i], "");
+        lv_obj_clear_flag(sName[i], LV_OBJ_FLAG_CLICKABLE);
+        sPct[i] = make_label(sMark[i], &lv_font_montserrat_14, C_WHITE);
+        lv_label_set_text(sPct[i], "");
+        lv_obj_clear_flag(sPct[i], LV_OBJ_FLAG_CLICKABLE);
+        sCd[i] = make_label(sCell[i], &lv_font_montserrat_16, C_GOLD);
         lv_label_set_text(sCd[i], "");
+        lv_obj_set_style_text_align(sCd[i], LV_TEXT_ALIGN_CENTER, 0);
     }
 
-    sPager = lv_obj_create(scr);
-    lv_obj_remove_style_all(sPager);
-    lv_obj_set_size(sPager, 240, 32);
-    lv_obj_align(sPager, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_clear_flag(sPager, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(sPager, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_clear_flag(sPager, LV_OBJ_FLAG_EVENT_BUBBLE);
-
-    lv_obj_t *prev = make_hit(sPager, 36, 32, C_BG, on_pager_prev);
-    lv_obj_align(prev, LV_ALIGN_LEFT_MID, 40, 0);
-    lv_obj_set_style_bg_opa(prev, LV_OPA_TRANSP, 0);
-    lv_obj_t *pl = lv_label_create(prev);
-    lv_label_set_text(pl, "<");
-    lv_obj_set_style_text_font(pl, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(pl, C_GOLD, 0);
-    lv_obj_center(pl);
-
-    sPagerNum = make_label(sPager, &lv_font_montserrat_12, C_MUTE);
+    sPager = make_bottom_dock(scr);
+    sPagerNum = make_label(sPager, &lv_font_montserrat_16, C_MUTE);
     lv_label_set_text(sPagerNum, "1/9");
     lv_obj_center(sPagerNum);
-
-    lv_obj_t *next = make_hit(sPager, 36, 32, C_BG, on_pager_next);
-    lv_obj_align(next, LV_ALIGN_RIGHT_MID, -40, 0);
-    lv_obj_set_style_bg_opa(next, LV_OPA_TRANSP, 0);
-    lv_obj_t *nl = lv_label_create(next);
-    lv_label_set_text(nl, ">");
-    lv_obj_set_style_text_font(nl, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(nl, C_GOLD, 0);
-    lv_obj_center(nl);
+    lv_obj_move_foreground(sPagerNum);
 }
 
 static void make_idle(lv_obj_t *scr) {
@@ -1357,8 +1906,10 @@ static void make_idle(lv_obj_t *scr) {
     lv_obj_set_style_text_font(sIdleBat, &font_idle_16, 0);
     lv_obj_align(sIdleBatRow, LV_ALIGN_TOP_RIGHT, -14, 14);
 
-    sIdleTime = make_label(scr, &font_idle_time, C_TIME);
+    sIdleTime = make_label(scr, &lv_font_montserrat_48, C_TIME);
     lv_obj_set_style_text_letter_space(sIdleTime, 2, 0);
+    lv_obj_set_width(sIdleTime, 220);
+    lv_obj_set_style_text_align(sIdleTime, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_text(sIdleTime, "--:--");
     lv_obj_align(sIdleTime, LV_ALIGN_CENTER, 0, -12);
 
@@ -1386,39 +1937,59 @@ static void make_plan(lv_obj_t *scr) {
     lv_obj_align(sPlanGhost, LV_ALIGN_TOP_RIGHT, 8, 52);
     lv_obj_clear_flag(sPlanGhost, LV_OBJ_FLAG_CLICKABLE);
 
-    sPlanBack = make_hit(scr, 36, 36, C_PLAN, on_plan_back);
+    sPlanBack = make_hit(scr, 48, 48, C_BG, on_plan_back);
     lv_obj_set_style_bg_opa(sPlanBack, LV_OPA_TRANSP, 0);
-    lv_obj_set_pos(sPlanBack, 6, 8);
+    lv_obj_set_pos(sPlanBack, 2, 2);
     lv_obj_t *bl = lv_label_create(sPlanBack);
-    lv_label_set_text(bl, "<");
+    lv_label_set_text(bl, LV_SYMBOL_LEFT);
     lv_obj_set_style_text_font(bl, &lv_font_montserrat_20, 0);
-    lv_obj_set_style_text_color(bl, C_COPPER, 0);
+    lv_obj_set_style_text_color(bl, C_GOLD, 0);
     lv_obj_center(bl);
 
     sPlanName = make_label(scr, &lv_font_montserrat_16, C_INK);
     lv_label_set_text(sPlanName, "");
-    lv_obj_align(sPlanName, LV_ALIGN_TOP_LEFT, 42, 12);
+    lv_obj_align(sPlanName, LV_ALIGN_TOP_LEFT, 50, 10);
     sPlanUpd = make_label(scr, &lv_font_montserrat_12, C_MUTE);
     lv_label_set_text(sPlanUpd, "");
-    lv_obj_align(sPlanUpd, LV_ALIGN_TOP_LEFT, 42, 34);
+    lv_obj_set_style_text_letter_space(sPlanUpd, 2, 0);
+    lv_obj_align(sPlanUpd, LV_ALIGN_TOP_LEFT, 50, 30);
 
     static const char *labs[3] = {"5H", "7D", "1M"};
     for (int i = 0; i < 3; i++) {
-        int y = 70 + i * 40;
+        int y = 54 + i * 42;
         sPlanLab[i] = make_label(scr, &lv_font_montserrat_12, C_MUTE);
         lv_label_set_text(sPlanLab[i], labs[i]);
-        lv_obj_align(sPlanLab[i], LV_ALIGN_TOP_LEFT, 16, y);
-        sPlanPct[i] = make_label(scr, &lv_font_montserrat_14, C_COPPER);
+        lv_obj_set_style_text_letter_space(sPlanLab[i], 2, 0);
+        lv_obj_align(sPlanLab[i], LV_ALIGN_TOP_LEFT, 14, y);
+        sPlanPct[i] = make_label(scr, &lv_font_montserrat_16, C_INK);
         lv_label_set_text(sPlanPct[i], "--");
-        lv_obj_align(sPlanPct[i], LV_ALIGN_TOP_RIGHT, -16, y);
-        sPlanTrack[i] = make_rect(scr, 208, 2, lv_color_hex(0x241F1C));
-        lv_obj_align(sPlanTrack[i], LV_ALIGN_TOP_LEFT, 16, y + 20);
-        sPlanFill[i] = make_rect(sPlanTrack[i], 0, 2, C_COPPER);
+        lv_obj_align(sPlanPct[i], LV_ALIGN_TOP_RIGHT, -14, y - 2);
+        sPlanTrack[i] = make_rect(scr, 212, 4, lv_color_hex(0xFFFFFF));
+        lv_obj_set_style_bg_opa(sPlanTrack[i], LV_OPA_20, 0);
+        lv_obj_set_style_radius(sPlanTrack[i], 2, 0);
+        lv_obj_align(sPlanTrack[i], LV_ALIGN_TOP_LEFT, 14, y + 22);
+        sPlanFill[i] = make_rect(sPlanTrack[i], 0, 4, C_GOLD);
+        lv_obj_set_style_radius(sPlanFill[i], 2, 0);
         lv_obj_align(sPlanFill[i], LV_ALIGN_LEFT_MID, 0, 0);
     }
     sPlanFoot = make_label(scr, &lv_font_montserrat_12, C_MUTE);
-    lv_label_set_text(sPlanFoot, "");
-    lv_obj_align(sPlanFoot, LV_ALIGN_BOTTOM_LEFT, 16, -16);
+    lv_label_set_text(sPlanFoot, "swipe back");
+    lv_obj_align(sPlanFoot, LV_ALIGN_BOTTOM_LEFT, 14, -18);
+}
+
+static void oracle_hide() {
+    if (!sOracle) return;
+    lv_obj_add_flag(sOracle, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(sOracle, LV_OBJ_FLAG_CLICKABLE);
+}
+
+static void on_oracle_tap(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    /* CST816 rarely emits CLICKED; labels on the stick also steal hits unless
+       they are non-clickable. Dismiss on short-click, click, or lift. */
+    if (code != LV_EVENT_SHORT_CLICKED && code != LV_EVENT_CLICKED
+        && code != LV_EVENT_RELEASED && code != LV_EVENT_GESTURE) return;
+    oracle_hide();
 }
 
 static void make_pack(lv_obj_t *scr) {
@@ -1429,6 +2000,7 @@ static void make_pack(lv_obj_t *scr) {
     sPackImg = lv_img_create(scr);
     lv_obj_clear_flag(sPackImg, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_align(sPackImg, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_img_opa(sPackImg, LV_OPA_COVER, 0);
 
     lv_obj_t *bar = make_rect(scr, 240, 28, lv_color_hex(0x000000));
     lv_obj_align(bar, LV_ALIGN_TOP_MID, 0, 10);
@@ -1463,6 +2035,69 @@ static void make_pack(lv_obj_t *scr) {
     pack_draw_total();
 }
 
+static void make_oracle_overlay(lv_obj_t *parent) {
+    sOracle = lv_obj_create(parent);
+    lv_obj_remove_style_all(sOracle);
+    lv_obj_set_size(sOracle, 240, 240);
+    lv_obj_set_style_bg_color(sOracle, C_VEIL, 0);
+    lv_obj_set_style_bg_opa(sOracle, LV_OPA_70, 0);
+    lv_obj_clear_flag(sOracle, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(sOracle, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(sOracle, LV_OBJ_FLAG_EVENT_BUBBLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
+    lv_obj_add_event_cb(sOracle, on_oracle_tap, LV_EVENT_SHORT_CLICKED, nullptr);
+    lv_obj_add_event_cb(sOracle, on_oracle_tap, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_event_cb(sOracle, on_oracle_tap, LV_EVENT_RELEASED, nullptr);
+    lv_obj_add_event_cb(sOracle, on_oracle_tap, LV_EVENT_GESTURE, nullptr);
+    lv_obj_add_flag(sOracle, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(sOracle);
+
+    lv_obj_t *stick = lv_obj_create(sOracle);
+    lv_obj_remove_style_all(stick);
+    lv_obj_set_size(stick, 168, 148);
+    lv_obj_set_style_radius(stick, 12, 0);
+    lv_obj_set_style_bg_color(stick, lv_color_hex(0xFFF0C8), 0);
+    lv_obj_set_style_bg_opa(stick, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(stick, 10, 0);
+    lv_obj_align(stick, LV_ALIGN_CENTER, 0, -6);
+    lv_obj_clear_flag(stick, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    sOracleNo = make_label(stick, &font_idle_12, lv_color_hex(0x8A5A20));
+    lv_label_set_text(sOracleNo, "");
+    lv_obj_set_width(sOracleNo, 148);
+    lv_obj_set_style_text_align(sOracleNo, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(sOracleNo, LV_ALIGN_TOP_MID, 0, 4);
+
+    sOracleGrade = make_label(stick, &font_idle_16, lv_color_hex(0xB84A1A));
+    lv_label_set_text(sOracleGrade, "");
+    lv_obj_set_width(sOracleGrade, 148);
+    lv_obj_set_style_text_align(sOracleGrade, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(sOracleGrade, LV_ALIGN_TOP_MID, 0, 28);
+
+    sOracleVerse = make_label(stick, &font_idle_12, lv_color_hex(0x3A2A18));
+    lv_label_set_text(sOracleVerse, "");
+    lv_obj_set_width(sOracleVerse, 148);
+    lv_obj_set_style_text_align(sOracleVerse, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_long_mode(sOracleVerse, LV_LABEL_LONG_WRAP);
+    lv_obj_align(sOracleVerse, LV_ALIGN_TOP_MID, 0, 56);
+
+    lv_obj_t *ohint = make_label(sOracle, &font_idle_12, C_MUTE);
+    lv_label_set_text(ohint, "再晃重抽 · 点一下收起");
+    lv_obj_align(ohint, LV_ALIGN_BOTTOM_MID, 0, -14);
+
+    uint32_t n = lv_obj_get_child_cnt(sOracle);
+    for (uint32_t i = 0; i < n; i++) {
+        lv_obj_t *c = lv_obj_get_child(sOracle, i);
+        lv_obj_clear_flag(c, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(c, LV_OBJ_FLAG_SCROLLABLE);
+        uint32_t gn = lv_obj_get_child_cnt(c);
+        for (uint32_t j = 0; j < gn; j++) {
+            lv_obj_t *g = lv_obj_get_child(c, j);
+            lv_obj_clear_flag(g, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_clear_flag(g, LV_OBJ_FLAG_SCROLLABLE);
+        }
+    }
+}
+
 void ui_init() {
     pack_load();
     brand_init();
@@ -1472,11 +2107,16 @@ void ui_init() {
     lv_theme_t *th = lv_theme_default_init(disp, C_COPPER, C_MUTE, true, LV_FONT_DEFAULT);
     lv_disp_set_theme(disp, th);
 
-    lv_color_t bgs[PAGE_COUNT] = {C_BG, C_BG, lv_color_hex(0x000000), C_IDLE, C_PLAN};
+    /* Wave veils on every page except PACK (original compressor is black + sprites). */
+    static const lv_opa_t kVeil[PAGE_COUNT] = {
+        (lv_opa_t)56, (lv_opa_t)107, (lv_opa_t)0, (lv_opa_t)140, (lv_opa_t)122, (lv_opa_t)140
+    };
     for (int i = 0; i < PAGE_COUNT; i++) {
         sScreens[i] = lv_obj_create(nullptr);
-        paint_scr(sScreens[i], bgs[i]);
+        paint_scr(sScreens[i], i == PAGE_PACK ? lv_color_hex(0x000000) : C_BG);
+        if (i != PAGE_PACK) attach_wave(sScreens[i], i, kVeil[i]);
         lv_obj_add_event_cb(sScreens[i], on_swipe, LV_EVENT_PRESSED, nullptr);
+        lv_obj_add_event_cb(sScreens[i], on_swipe, LV_EVENT_PRESSING, nullptr);
         lv_obj_add_event_cb(sScreens[i], on_swipe, LV_EVENT_RELEASED, nullptr);
         lv_obj_add_event_cb(sScreens[i], on_swipe, LV_EVENT_GESTURE, nullptr);
     }
@@ -1485,6 +2125,8 @@ void ui_init() {
     make_pack(sScreens[PAGE_PACK]);
     make_idle(sScreens[PAGE_IDLE]);
     make_plan(sScreens[PAGE_PLAN]);
+    make_settings(sScreens[PAGE_SETTINGS]);
+    sChromeDark = (gCfg.wall_id == 2);
     for (int i = 0; i < PAGE_COUNT; i++) bubble_tree(sScreens[i]);
     lv_obj_add_flag(sScreens[PAGE_PACK], LV_OBJ_FLAG_CLICKABLE);
 
@@ -1515,12 +2157,16 @@ void ui_init() {
     lv_obj_set_style_text_align(sToast, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(sToast, 204);
     lv_obj_align(sToast, LV_ALIGN_TOP_MID, 0, 8);
+    lv_obj_clear_flag(sToast, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(sToast, LV_OBJ_FLAG_HIDDEN);
+
+    make_oracle_overlay(lv_layer_top());
 
     lv_scr_load(sScreens[sPage]);
     pack_draw_total();
     usage_paint();
     ui_refresh_from_status();
+    display_apply_presence();
 }
 
 static bool desk_running() {
@@ -1545,17 +2191,34 @@ void ui_refresh_from_status() {
 
     if (sLine) {
         if (rec) {
+            if (sLineBg) lv_obj_add_flag(sLineBg, LV_OBJ_FLAG_HIDDEN);
             uint32_t ms = voice_rec_ms();
             char t[16];
             snprintf(t, sizeof(t), "%u.%u", (unsigned)(ms / 1000), (unsigned)((ms / 100) % 10));
             lv_label_set_text(sLine, t);
             lv_obj_set_style_text_font(sLine, &lv_font_montserrat_28, 0);
             lv_obj_set_style_text_color(sLine, C_INK, 0);
+            lv_label_set_long_mode(sLine, LV_LABEL_LONG_CLIP);
             lv_obj_set_width(sLine, 200);
             lv_obj_set_style_text_align(sLine, LV_TEXT_ALIGN_CENTER, 0);
-            lv_obj_align(sLine, LV_ALIGN_TOP_MID, 0, 58);
+            lv_obj_align(sLine, LV_ALIGN_TOP_MID, 0, 46);
             lv_obj_clear_flag(sLine, LV_OBJ_FLAG_HIDDEN);
+        } else if (gStatus.last_text[0]) {
+            const char *show = gStatus.last_text;
+            if (!font_can_draw(&font_idle_16, show)) show = "发送";
+            if (sLineBg) lv_obj_clear_flag(sLineBg, LV_OBJ_FLAG_HIDDEN);
+            lv_label_set_text(sLine, show);
+            lv_obj_set_style_text_font(sLine, &font_idle_16, 0);
+            lv_obj_set_style_text_color(sLine, C_GOLD, 0);
+            lv_label_set_long_mode(sLine, LV_LABEL_LONG_WRAP);
+            lv_obj_set_width(sLine, 212);
+            lv_obj_set_style_text_align(sLine, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_style_text_line_space(sLine, 3, 0);
+            lv_obj_align(sLine, LV_ALIGN_TOP_MID, 0, 44);
+            lv_obj_clear_flag(sLine, LV_OBJ_FLAG_HIDDEN);
+            if (sLineBg) lv_obj_move_background(sLineBg);
         } else {
+            if (sLineBg) lv_obj_add_flag(sLineBg, LV_OBJ_FLAG_HIDDEN);
             lv_label_set_text(sLine, "");
             lv_obj_add_flag(sLine, LV_OBJ_FLAG_HIDDEN);
         }
@@ -1565,11 +2228,22 @@ void ui_refresh_from_status() {
         static const char *ka[3] = {"发送", "取消", "讲话"};
         for (int i = 0; i < 3; i++) {
             lv_label_set_text(sKeyAct[i], ka[i]);
-            lv_obj_set_style_text_color(sKeyAct[i], C_WHITE, 0);
-            lv_color_t bg = C_ORANGE;
-            if (i == 2 && rec) bg = lv_color_hex(0xC45C12);
-            else if (i == 1 && (rec || running)) bg = lv_color_hex(0xC45C12);
-            lv_obj_set_style_bg_color(sKey[i], bg, LV_PART_MAIN);
+            if (i == 2) {
+                lv_obj_set_style_bg_color(sKey[i], C_ORANGE, LV_PART_MAIN);
+                lv_obj_set_style_bg_opa(sKey[i], rec ? LV_OPA_COVER : LV_OPA_90, LV_PART_MAIN);
+                lv_obj_set_style_border_color(sKey[i], C_ORANGE, LV_PART_MAIN);
+                lv_obj_set_style_text_color(sKeyAct[i], lv_color_hex(0x1A140C), 0);
+            } else if (i == 1 && (rec || running)) {
+                lv_obj_set_style_bg_color(sKey[i], C_HOT, LV_PART_MAIN);
+                lv_obj_set_style_bg_opa(sKey[i], LV_OPA_COVER, LV_PART_MAIN);
+                lv_obj_set_style_border_color(sKey[i], C_HOT, LV_PART_MAIN);
+                lv_obj_set_style_text_color(sKeyAct[i], C_WHITE, 0);
+            } else {
+                lv_obj_set_style_bg_color(sKey[i], lv_color_hex(0x12161E), LV_PART_MAIN);
+                lv_obj_set_style_bg_opa(sKey[i], LV_OPA_COVER, LV_PART_MAIN);
+                lv_obj_set_style_border_color(sKey[i], C_GOLD, LV_PART_MAIN);
+                lv_obj_set_style_text_color(sKeyAct[i], C_GOLD, 0);
+            }
         }
     }
 
@@ -1587,24 +2261,32 @@ void ui_refresh_from_status() {
         if (rec) {
             lv_obj_set_style_bg_color(sTalkBtn,
                 sBlinkOn ? lv_color_hex(0x1A1814) : lv_color_hex(0x2A2218), LV_PART_MAIN);
-            lv_obj_set_style_text_color(sTalkLab, sBlinkOn ? C_TALK : C_WHITE, 0);
+            lv_obj_set_style_bg_opa(sTalkBtn, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_border_color(sTalkBtn, sBlinkOn ? C_TALK : C_GOLD, LV_PART_MAIN);
+            lv_obj_set_style_text_color(sTalkLab, sBlinkOn ? C_TALK : C_GOLD, 0);
             if (sTalkHalo) lv_obj_set_style_bg_opa(sTalkHalo, sBlinkOn ? LV_OPA_50 : LV_OPA_20, 0);
         } else {
-            lv_obj_set_style_bg_color(sTalkBtn, C_ORANGE, LV_PART_MAIN);
-            lv_obj_set_style_text_color(sTalkLab, C_WHITE, 0);
+            lv_obj_set_style_bg_color(sTalkBtn, lv_color_hex(0x12161E), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(sTalkBtn, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_border_color(sTalkBtn, C_GOLD, LV_PART_MAIN);
+            lv_obj_set_style_text_color(sTalkLab, C_GOLD, 0);
         }
         lv_obj_center(sTalkLab);
     }
 
     if (sStopBtn && sStopLab) {
-        lv_label_set_text(sStopLab, ICON_BAN);
+        lv_label_set_text(sStopLab, ICON_STOP);
         lv_obj_set_style_text_font(sStopLab, &font_icons, 0);
         if (rec || running) {
             lv_obj_set_style_bg_color(sStopBtn, C_HOT, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(sStopBtn, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_border_color(sStopBtn, C_HOT, LV_PART_MAIN);
             lv_obj_set_style_text_color(sStopLab, C_WHITE, 0);
         } else {
-            lv_obj_set_style_bg_color(sStopBtn, C_WELL, LV_PART_MAIN);
-            lv_obj_set_style_text_color(sStopLab, C_MUTE, 0);
+            lv_obj_set_style_bg_color(sStopBtn, lv_color_hex(0x12161E), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(sStopBtn, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_border_color(sStopBtn, C_GOLD, LV_PART_MAIN);
+            lv_obj_set_style_text_color(sStopLab, C_GOLD, 0);
         }
         lv_obj_center(sStopLab);
     }
@@ -1639,7 +2321,12 @@ void ui_refresh_from_status() {
 }
 
 void ui_next_page() {
-    if (ui_nav_blocked()) return;
+    static uint32_t sLastNav = 0;
+    uint32_t now = millis();
+    if (now - sLastNav < 120) return;
+    sLastNav = now;
+    tap_lock();
+    swipe_unblock_nav();
     if (sPage == PAGE_IDLE) {
         wake_idle();
         return;
@@ -1663,14 +2350,18 @@ void ui_next_page() {
             usage_paint();
             return;
         }
-        /* Compressor is an easter egg — not on the main swipe path. */
-        ui_toast("END");
+        open_settings(PAGE_USAGE);
         return;
     }
 }
 
 void ui_prev_page() {
-    if (ui_nav_blocked()) return;
+    static uint32_t sLastNav = 0;
+    uint32_t now = millis();
+    if (now - sLastNav < 120) return;
+    sLastNav = now;
+    tap_lock();
+    swipe_unblock_nav();
     if (sPage == PAGE_IDLE) {
         wake_idle();
         return;
@@ -1682,6 +2373,10 @@ void ui_prev_page() {
         return;
     }
     if (sPage == PAGE_DESK) return;
+    if (sPage == PAGE_SETTINGS) {
+        close_settings();
+        return;
+    }
     if (sPage == PAGE_USAGE) {
         if (sUsagePage > 0) {
             sUsagePage--;
@@ -1693,24 +2388,36 @@ void ui_prev_page() {
         return;
     }
     if (sPage == PAGE_PACK) {
-        if (sPackFromUsage) {
-            sPage = PAGE_USAGE;
-            sUsagePage = usage_pages() - 1;
-            if (sUsagePage < 0) sUsagePage = 0;
-            show_current();
-            return;
-        }
-        sPage = PAGE_DESK;
+        sPage = sPackReturnPage;
+        if (sPage != PAGE_DESK && sPage != PAGE_USAGE) sPage = PAGE_DESK;
         show_current();
+        return;
     }
 }
 
 int ui_page() { return sPage; }
 bool ui_is_idle() { return sPage == PAGE_IDLE; }
+bool ui_is_usage() { return sPage == PAGE_USAGE; }
 bool ui_is_pack() { return sPage == PAGE_PACK; }
+
+bool ui_oracle_visible() {
+    return sOracle && !lv_obj_has_flag(sOracle, LV_OBJ_FLAG_HIDDEN);
+}
 bool ui_nav_blocked() { return voice_is_recording(); }
 
 void ui_wake_from_idle() { wake_idle(); }
+
+void ui_force_wake() {
+    sActAt = millis();
+    gStatus.screen_off = false;
+    sIdlePress = false;
+    display_clear_touch_swallow();
+    if (sPage == PAGE_IDLE) sPage = PAGE_DESK;
+    display_apply_presence();
+    show_current();
+    ui_refresh_from_status();
+    lv_obj_invalidate(lv_scr_act());
+}
 
 void ui_loop() {
     uint32_t now = millis();
@@ -1732,10 +2439,12 @@ void ui_loop() {
         if (sPage == PAGE_IDLE) idle_paint();
         if (sPage == PAGE_PLAN) plan_paint();
         quota_chime();
-        if (!voice_is_recording() && (sPage == PAGE_DESK || sPage == PAGE_USAGE) &&
-            now - sActAt > kIdleMs) {
-            sPage = PAGE_IDLE;
-            show_current();
+        {
+            uint32_t idle = idle_ms();
+            if (idle != 0xFFFFFFFFu && !voice_is_recording() &&
+                !gStatus.screen_off && now - sActAt > idle) {
+                display_blank();
+            }
         }
     }
     if (voice_is_recording()) {
