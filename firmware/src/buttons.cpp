@@ -8,7 +8,12 @@
 #include "voice.h"
 #include "beep.h"
 #include "imu.h"
+#include "rgb.h"
 #include <cstring>
+#include <esp_sleep.h>
+
+#define PWR_BLANK_MS 1200u
+#define PWR_OFF_MS 3000u
 
 struct Btn {
     int pin;
@@ -25,7 +30,10 @@ static uint32_t sLastKeyAt = 0;
 static bool sPlusWake = false;
 static bool sBootWake = false;
 static bool sPwrWake = false;
+static bool sPwrFromBlank = false;
 static bool sPwrBlanked = false;
+static bool sPwrOffArmed = false;
+static bool sPwrHoldIgnore = false;
 
 uint32_t buttons_last_at() { return sLastKeyAt; }
 
@@ -35,6 +43,10 @@ void buttons_init() {
     pinMode(BTN_BOOT_GPIO, INPUT_PULLUP);
     pinMode(BTN_PLUS_GPIO, INPUT_PULLUP);
     pinMode(BTN_PWR_GPIO, INPUT_PULLUP);
+    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {
+        sPwrHoldIgnore = true;
+        Serial.println("[KEY] sleep-wake, ignore PWR until release");
+    }
 }
 
 void buttons_loop() {
@@ -135,38 +147,69 @@ void buttons_loop() {
         sBoot.long_fired = false;
     }
 
-    // PWR: rec = cancel. Running agent = Stop. Idle = refresh the four meters.
+    // PWR: tap = cancel / Stop / refresh. 1.2s = blank. 3s then release = sleep.
     bool pwr = read_btn(BTN_PWR_GPIO);
-    if (pwr && !sPwr.down) {
+    if (sPwrHoldIgnore) {
+        if (pwr) {
+            gStatus.key_busy = true;
+        } else {
+            sPwrHoldIgnore = false;
+        }
+    } else if (pwr && !sPwr.down) {
         sPwr.down = true;
         sPwr.t0 = now;
         sLastKeyAt = now;
         gStatus.key_busy = true;
-        bool asleep = gStatus.screen_off || ui_is_idle();
-        ui_note_activity();
-        sPwrWake = asleep;
+        sPwrFromBlank = gStatus.screen_off;
         sPwrBlanked = false;
-        if (asleep) ui_force_wake();
-        if (gStatus.prone) imu_clear_prone();
-        Serial.println(asleep ? "[KEY] pwr wake" : "[KEY] pwr down");
+        sPwrOffArmed = false;
+        if (sPwrFromBlank) {
+            sPwrWake = true;
+            Serial.println("[KEY] pwr down (blanked)");
+        } else {
+            bool idlePage = ui_is_idle();
+            ui_note_activity();
+            sPwrWake = idlePage;
+            if (idlePage) ui_force_wake();
+            if (gStatus.prone) imu_clear_prone();
+            Serial.println(idlePage ? "[KEY] pwr wake idle" : "[KEY] pwr down");
+        }
     }
     if (pwr && sPwr.down) gStatus.key_busy = true;
-    /* Long-press blanks the panel. Deep-sleep while PWR is still held
-       immediately wakes (ext0 = LOW), which is why the screen flashed. */
-    if (pwr && sPwr.down && !sPwrBlanked && now - sPwr.t0 > 3000) {
-        if (!voice_is_recording()) {
+    if (pwr && sPwr.down && !voice_is_recording()) {
+        uint32_t held = now - sPwr.t0;
+        if (!sPwrBlanked && held >= PWR_BLANK_MS) {
             sPwrBlanked = true;
             sPwrWake = true;
-            display_blank();
-            Serial.println("[KEY] pwr blank");
+            if (!gStatus.screen_off) {
+                display_blank();
+                beep_click();
+                Serial.println("[KEY] pwr blank");
+            } else {
+                Serial.println("[KEY] pwr blank hold");
+            }
+        }
+        if (!sPwrOffArmed && held >= PWR_OFF_MS) {
+            sPwrOffArmed = true;
+            rgb_shutdown_cue();
+            beep_request(BEEP_STOP);
+            Serial.println("[KEY] pwr off armed");
         }
     }
     if (!pwr && sPwr.down) {
         uint32_t dt = now - sPwr.t0;
-        if (dt >= 25 && dt < 3000) {
-            if (sPwrWake) {
-                sPwrWake = false;
-            } else if (voice_is_recording()) {
+        if (sPwrOffArmed) {
+            Serial.println("[KEY] pwr off");
+            sPwr.down = false;
+            board_power_off();
+        } else if (sPwrFromBlank && !sPwrBlanked) {
+            if (gStatus.prone) imu_clear_prone();
+            ui_force_wake();
+            Serial.println("[KEY] pwr wake");
+        } else if (sPwrBlanked || sPwrWake) {
+            Serial.printf("[KEY] pwr swallow dt=%u\n", (unsigned)dt);
+        } else if (dt >= 25) {
+            if (voice_is_recording()) {
                 Serial.printf("[KEY] pwr cancel dt=%u\n", (unsigned)dt);
                 voice_cancel();
                 ui_toast("canceled");
@@ -179,5 +222,9 @@ void buttons_loop() {
             }
         }
         sPwr.down = false;
+        sPwrWake = false;
+        sPwrFromBlank = false;
+        sPwrBlanked = false;
+        sPwrOffArmed = false;
     }
 }

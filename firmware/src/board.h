@@ -34,7 +34,7 @@
 
 #define BTN_BOOT_GPIO 0   // tap=Enter; hold does nothing (download strap)
 #define BTN_PLUS_GPIO 4   // hold-to-talk; release injects text (no Enter)
-#define BTN_PWR_GPIO 5    // tap=Stop / cancel rec; 3s=blank screen
+#define BTN_PWR_GPIO 5    // tap=Stop / cancel; 1.2s=blank; 3s+release=deep sleep
 
 // UART TX pad. USB CDC is the console, so GPIO43 is free for RMT/WS2812.
 #define WS2812_PIN 43

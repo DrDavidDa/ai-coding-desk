@@ -3,8 +3,10 @@
 #include "status.h"
 #include "imu.h"
 #include "ui.h"
+#include "rgb.h"
 #include <Arduino.h>
 #include <Wire.h>
+#include <WiFi.h>
 #include <esp_sleep.h>
 #include <esp_heap_caps.h>
 #include <driver/gpio.h>
@@ -67,13 +69,31 @@ void board_power_hold() {
 }
 
 void board_power_off() {
+    rgb_force_black();
     display_set_backlight(0);
+    if (gGfx) gGfx->displayOff();
+    /* Sleep only after PWR is HIGH. ext0 wakes on LOW; sleeping while
+       held is why the screen used to flash back on. */
+    uint32_t t0 = millis();
+    while (digitalRead(BTN_PWR_GPIO) == LOW && millis() - t0 < 4000) {
+        delay(10);
+    }
+    delay(60);
+    if (digitalRead(BTN_PWR_GPIO) == LOW) {
+        Serial.println("[PWR] still held, skip sleep");
+        return;
+    }
+    WiFi.disconnect(true, false);
+    WiFi.mode(WIFI_OFF);
     gpio_hold_dis((gpio_num_t)BAT_EN);
     digitalWrite(BAT_EN, HIGH);
     pinMode(BTN_PWR_GPIO, INPUT_PULLUP);
     rtc_gpio_pulldown_dis((gpio_num_t)BTN_PWR_GPIO);
     rtc_gpio_pullup_en((gpio_num_t)BTN_PWR_GPIO);
     esp_sleep_enable_ext0_wakeup((gpio_num_t)BTN_PWR_GPIO, 0);
+    Serial.println("[PWR] deep sleep");
+    Serial.flush();
+    delay(20);
     esp_deep_sleep_start();
 }
 
@@ -202,7 +222,7 @@ void touch_read(lv_indev_drv_t * /*indev*/, lv_indev_data_t *data) {
         if (points == 0) {
             sSwallowTouch = false;
             sSwallowAt = 0;
-        } else if (!sSwallowTouch) {
+        } else if (!sSwallowTouch && !gStatus.key_busy) {
             ui_note_activity();
         }
         sHoldAt = 0;

@@ -29,13 +29,12 @@ USB-JTAG 卡住（Win 错误 31 / COM8 消失）：拔 USB **和** 电池，先�
 | 键 | 短按 | 长按 / 按住 |
 |---|---|---|
 | BOOT | Enter（录音中忽略） | 下载绑带，固件不占用 |
-| PWR | 录音=取消；Agent 跑着=Stop；空闲=#PWR 刷新 | **约 3 秒熄屏**（不是关机） |
+| PWR | 录音=取消；Agent 跑着=Stop；空闲=#PWR 刷新 | **1.2 秒息屏**；继续按到 **3 秒，松开后 deep-sleep** |
 | PLUS | 忽略（太短不当说话） | 按住说话，松开注入（不回车） |
 
-唤醒：点屏或任意键（第一下只亮屏）。**摇一摇不唤醒。**  
-真断电：拔 USB。USB 插着时 MCU 一直活着，方便看额度和传语音。
-
-旧版 `board_power_off()` 在 PWR 仍按着时 deep-sleep，ext0=LOW 会立刻醒来，所以会出现「黑一下又亮」。已改成 `display_blank()`。
+唤醒（息屏）：点屏或任意键（第一下只亮屏）。**摇一摇不唤醒。**  
+唤醒（关机）：只有再按 **PWR**。开机后若键还按着，这一下会被丢掉，避免立刻再睡。  
+关机等 **松手** 才 `deep-sleep`（按着睡会被 ext0=LOW 立刻拍醒）。不拉低 `BAT_EN`。插着 USB 时关机后 host 可能掉线，再按 PWR 会回来。真拔电：拔 USB。
 
 ## 现在固件里有什么
 
@@ -84,7 +83,7 @@ USB-JTAG 卡住（Win 错误 31 / COM8 消失）：拔 USB **和** 电池，先�
 | 路径 | 说明 |
 |---|---|
 | `firmware/src/ui.cpp` | 页面、壁纸、抽签浮层、5 分钟熄屏 |
-| `firmware/src/buttons.cpp` | 三键；PWR 3 秒 `display_blank()` |
+| `firmware/src/buttons.cpp` | 三键；PWR 1.2 秒息屏，3 秒松手 `board_power_off()` |
 | `firmware/src/display.cpp` | 熄屏 / 唤醒；触点吞掉，避免黑屏立刻被点亮 |
 | `firmware/src/imu.cpp` | 抽签仅 USAGE；熄屏不唤醒 |
 | `firmware/src/oracle_lots.cpp` | 100 条 AI 签 |
@@ -99,7 +98,7 @@ USB-JTAG 卡住（Win 错误 31 / COM8 消失）：拔 USB **和** 电池，先�
 
 - 企业 Wi‑Fi 连不上时语音走 USB WAV
 - 屏上汉字依赖 `font_idle_*`；缺字会方框
-- 真关机做不干净：USB 供电时 MCU 不睡；`BAT_EN` 拉低曾砖过 LCD，所以产品语义是熄屏不是断电
+- USB 插着时 deep-sleep 省电有限（线还在供电）；`BAT_EN` 不能闩低，否则 LCD 电轨会卡死
 - GitHub Pages 演示：`docs/desk154-lab.html`
 
 ## 快速自检
@@ -107,5 +106,5 @@ USB-JTAG 卡住（Win 错误 31 / COM8 消失）：拔 USB **和** 电池，先�
 1. 顶栏三中文橘钮；两大圆：麦 / 方块
 2. 点麦 → 秒数 + 脉冲；PWR 或顶栏取消 → 丢录音
 3. 额度页连晃 3 下出签；DESK 页晃不动签
-4. 长按 PWR 3 秒保持黑；点屏或按键亮；摇不亮
+4. PWR 按 1.2 秒息屏；按满 3 秒灯闪再松开关机；再按 PWR 开机。息屏可点屏唤醒，关机不行
 5. host 盯 COM8，额度数字会变

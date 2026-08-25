@@ -18,7 +18,7 @@ Use the computer keyboard for `n` and MODE.
 | Button | GPIO | Short | Long / hold |
 |---|---|---|---|
 | BOOT | 0 | Enter (Play/submit). Ignored while recording. | download strap |
-| PWR | 5 | recording: cancel. Run: Stop. Idle coding: Up. Other apps: sync. | 3 s blank screen (MCU stays up) |
+| PWR | 5 | recording: cancel. Run: Stop. Idle coding: Up. Other apps: sync. | 1.2 s blank; keep holding to 3 s, **release** to deep-sleep |
 | PLUS | 4 | ignored (device-mic) | talk; release injects text (no Enter) |
 
 **Settings (Phase 1):** six wallpapers (Wave/Ember/Ink/Phosphor/Night/Stone), voice mode, inject target, PC status, warn thresholds, idle timer, SYNC. NVS keys `wall_id`, `idle_sec`; serial `#CFGLINE|wall_id=N`, `#CFGLINE|idle_sec=N`.

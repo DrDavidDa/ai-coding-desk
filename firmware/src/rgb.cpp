@@ -6,6 +6,7 @@
 
 static CRGB sLeds[WS2812_COUNT];
 static uint8_t sHue = 0;
+static uint32_t sCueUntil = 0;
 
 enum RgbPri { PRI_ALERT = 0, PRI_PTT, PRI_AGENT, PRI_IDLE };
 
@@ -23,7 +24,26 @@ void rgb_init() {
     FastLED.show();
 }
 
+void rgb_force_black() {
+    sCueUntil = 0;
+    fill_solid(sLeds, WS2812_COUNT, CRGB::Black);
+    FastLED.show();
+}
+
+void rgb_shutdown_cue() {
+    sCueUntil = millis() + 450;
+}
+
 void rgb_loop() {
+    if (sCueUntil) {
+        if ((int32_t)(millis() - sCueUntil) < 0) {
+            bool on = ((millis() / 80) % 2) == 0;
+            fill_solid(sLeds, WS2812_COUNT, on ? CRGB::White : CRGB::Black);
+            FastLED.show();
+            return;
+        }
+        sCueUntil = 0;
+    }
     if (gStatus.prone || gStatus.screen_off) {
         fill_solid(sLeds, WS2812_COUNT, CRGB::Black);
         FastLED.show();
